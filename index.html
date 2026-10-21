@@ -7,12 +7,12 @@
   <!-- PWA 全螢幕與 GitHub icon.png 綁定設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="特奧體能打卡">
+  <meta name="apple-mobile-web-app-title" content="足球體能打卡">
   <meta name="theme-color" content="#059669">
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="apple-touch-icon" href="icon.png">
 
-  <title>⚽ 香港特奧足球隊・體能訓練與成長紀錄系統</title>
+  <title>⚽ 足球隊・體能訓練與成長紀錄系統</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -44,6 +44,20 @@
     input[type=number] {
       -moz-appearance: textfield;
     }
+    /* 針對 iPhone 加入主畫面 (PWA) 頂部瀏海 / 動態島 / 時間狀態列的安全距離補償 */
+    .safe-top-header {
+      padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+      padding-bottom: 0.75rem;
+      padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+      padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    }
+    .safe-top-toast {
+      top: calc(4.5rem + env(safe-area-inset-top, 0px));
+    }
+    .safe-modal-overlay {
+      padding-top: max(1rem, calc(env(safe-area-inset-top, 0px) + 0.5rem));
+      padding-bottom: max(1rem, calc(env(safe-area-inset-bottom, 0px) + 0.5rem));
+    }
     .safe-bottom {
       padding-bottom: calc(6.5rem + env(safe-area-inset-bottom, 0px));
     }
@@ -58,8 +72,8 @@
 </head>
 <body class="min-h-screen text-slate-800 safe-bottom">
 
-  <!-- 全域載入與重試遮罩（解決網絡波動或登入拉取數據卡住問題） -->
-  <div id="globalLoadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <!-- 全域載入與重試遮罩 -->
+  <div id="globalLoadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 safe-modal-overlay">
     <div class="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl border-2 border-emerald-400 animate-pop">
       <div class="text-4xl animate-bounce mb-2">⚽</div>
       <p id="loadingStatusText" class="font-black text-slate-800 text-base">正在連線同步資料...</p>
@@ -67,9 +81,9 @@
     </div>
   </div>
 
-  <!-- 自訂無障礙互動彈窗（取代原生 alert / confirm / prompt，防阻擋且字大清晰，支援多選隊伍） -->
-  <div id="customModalOverlay" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-2 border-emerald-400 animate-pop max-h-[90vh] overflow-y-auto">
+  <!-- 自訂無障礙互動彈窗（取代原生 alert / confirm / prompt，支援單行輸入與多選隊伍） -->
+  <div id="customModalOverlay" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center px-4 safe-modal-overlay">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-2 border-emerald-400 animate-pop max-h-[85vh] overflow-y-auto">
       <div id="modalIcon" class="text-4xl text-center mb-2">🌟</div>
       <h3 id="modalTitle" class="text-lg sm:text-xl font-black text-slate-900 text-center mb-1.5">系統提示</h3>
       <p id="modalMessage" class="text-xs sm:text-sm font-bold text-slate-600 text-center whitespace-pre-line mb-4"></p>
@@ -89,14 +103,14 @@
     </div>
   </div>
 
-  <!-- 頂部導航列（自動讀取 icon.png，若未上傳則優雅退回 ⚽ 圖示） -->
-  <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-3 sm:px-5 py-3 shadow-lg sticky top-0 z-30">
+  <!-- 頂部導航列（已加入 iPhone 瀏海與動態島 safe-area-inset-top 防遮擋保護，並自動讀取 icon.png） -->
+  <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white sm:px-5 shadow-lg sticky top-0 z-30 safe-top-header">
     <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
       <div class="flex items-center gap-2.5 min-w-0">
         <img src="icon.png" alt="隊徽" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover bg-white/20 shadow-sm shrink-0" onerror="this.style.display='none'; document.getElementById('fallbackHeaderEmoji').classList.remove('hidden');">
         <span id="fallbackHeaderEmoji" class="text-2xl shrink-0 hidden">⚽</span>
         <div class="min-w-0">
-          <h1 class="text-base sm:text-xl font-black tracking-wide leading-tight truncate">特奧足球隊體能打卡站</h1>
+          <h1 class="text-base sm:text-xl font-black tracking-wide leading-tight truncate">足球隊體能打卡站</h1>
           <p class="text-[11px] sm:text-xs text-emerald-100 font-medium truncate">目標起碼四日做體能 💪🏻 保持最佳狀態</p>
         </div>
       </div>
@@ -104,14 +118,14 @@
         <button id="btnManualSync" title="重新同步最新資料" class="bg-white/20 hover:bg-white/30 active:scale-95 transition px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
           <span>🔄</span><span class="hidden sm:inline">同步</span>
         </button>
-        <span id="currentUserBadge" class="bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold max-w-[115px] sm:max-w-[200px] truncate"></span>
+        <span id="currentUserBadge" class="bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold max-w-[110px] sm:max-w-[200px] truncate"></span>
         <button id="btnLogout" class="bg-rose-500 hover:bg-rose-600 active:scale-95 transition px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold shadow shrink-0">登出</button>
       </div>
     </div>
   </header>
 
   <!-- 系統提示 Toast -->
-  <div id="toastBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-40 hidden max-w-[92vw] w-max bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border-2 border-emerald-400 text-sm font-black text-center transition-all"></div>
+  <div id="toastBanner" class="fixed safe-top-toast left-1/2 -translate-x-1/2 z-40 hidden max-w-[92vw] w-max bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border-2 border-emerald-400 text-sm font-black text-center transition-all"></div>
 
   <main class="max-w-4xl mx-auto p-2.5 sm:p-5">
 
@@ -125,7 +139,7 @@
       <!-- 登入卡片 -->
       <div id="loginCard" class="bg-white rounded-3xl shadow-xl p-4 sm:p-6 border border-slate-100">
         <h2 class="text-xl sm:text-2xl font-black text-slate-800 text-center mb-1">👋🏻 學員／助教／總教練登入</h2>
-        <p class="text-center text-slate-500 text-xs sm:text-sm mb-5">登入後會自動記住帳號，重新載入或下次打開免重複登入</p>
+        <p class="text-center text-slate-500 text-xs sm:text-sm mb-5">登入後會自動記住帳號，下次打開免重複登入</p>
 
         <div class="space-y-4">
           <div>
@@ -154,19 +168,19 @@
 
           <div class="flex flex-col sm:flex-row gap-2 pt-2">
             <button id="btnForgotPwd" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
-              😢 忘記密碼？通知總教練幫手
+              😢 忘記密碼？通知教練幫手
             </button>
             <button id="btnGoRegister" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
-              ➕ 新隊員／助教／教練註冊
+              ➕ 新隊員／職員註冊
             </button>
           </div>
         </div>
       </div>
 
-      <!-- 註冊卡片（支援多選隊伍，總教練輸入授權碼後自動免填隊伍） -->
+      <!-- 註冊卡片 -->
       <div id="registerCard" class="hidden bg-white rounded-3xl shadow-xl p-4 sm:p-6 border border-slate-100">
         <div class="flex justify-between items-center mb-4 gap-2">
-          <h2 class="text-xl sm:text-2xl font-black text-blue-900">📝 註冊新帳號</h2>
+          <h2 class="text-xl sm:text-2xl font-black text-blue-900">📝 新隊員／助教／總教練註冊</h2>
           <button id="btnBackLogin" class="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0">⬅️ 返回登入</button>
         </div>
 
@@ -191,18 +205,18 @@
             <input type="text" id="regPassword" placeholder="例如：球衣號碼 7 或 生日 0512" class="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
-          <!-- 職員授權碼（先檢測是否總教練或助教，如為總教練自動免填隊伍） -->
+          <!-- 5. 身份授權碼（先填寫，若為總教練即自動隱藏隊伍選擇） -->
           <div class="pt-2 border-t border-slate-100">
-            <label class="block text-xs font-bold text-slate-600 mb-1">5. 身份授權碼（學員請留空；助教／總教練請輸入授權碼）：</label>
-            <input type="password" id="regAuthCode" placeholder="學員請留空（助教或總教練請在此輸入）" class="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold focus:border-blue-500 focus:bg-white focus:outline-none">
-            <p id="regRoleDetectBadge" class="text-xs font-black text-emerald-700 mt-1">⚽ 目前註冊身份：學員（請在下方勾選所屬隊伍）</p>
+            <label class="block text-xs font-bold text-slate-600 mb-1">5. 身份授權碼（⚽ 一般學員請留空；助教／總教練請輸入授權碼）：</label>
+            <input type="password" id="regCoachCode" placeholder="一般學員不用填寫（請留空）" class="w-full p-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold focus:border-blue-500 focus:outline-none">
+            <p id="regRoleDetectHint" class="text-xs font-black text-emerald-700 mt-1">目前註冊身份：⚽ 隊員（學員）— 請在下方勾選你所屬的隊伍</p>
           </div>
 
-          <!-- 所屬隊伍選擇區（支援多選，總教練自動隱藏免填） -->
-          <div id="regTeamSelectionWrap" class="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-3.5">
-            <label class="block text-sm font-black text-blue-950 mb-1">6. 請勾選所屬隊伍（可多選一隊或多隊） <span class="text-rose-500">*</span></label>
-            <p class="text-xs text-slate-500 mb-2.5">如果你同時屬於多支代表隊或梯隊，可以同時勾選多個隊伍：</p>
-            <div id="regTeamsCheckboxes" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+          <!-- 6. 所屬隊伍選擇（支援多選；總教練免填自動隱藏） -->
+          <div id="regTeamSelectWrap" class="bg-blue-50/70 p-3.5 rounded-2xl border-2 border-blue-200">
+            <label class="block text-sm font-black text-blue-950 mb-1">6. 請勾選所屬隊伍（可選多於一隊） <span class="text-rose-500">*</span></label>
+            <p class="text-xs text-blue-700 font-bold mb-2.5">如你同時參與多支梯隊／代表隊／校隊，可全部勾選：</p>
+            <div id="regTeamsCheckboxList" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
           </div>
 
           <p id="regErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-xs sm:text-sm font-bold text-center"></p>
@@ -217,24 +231,23 @@
     <!-- ==================== 2. 學員專區畫面 ==================== -->
     <section id="studentSection" class="hidden space-y-4 mt-1">
 
-      <!-- 學員所屬隊伍與週次切換列 -->
+      <!-- 學員所屬隊伍標籤與課表切換列 ＋ 週次切換器 -->
       <div class="bg-white rounded-2xl shadow-sm p-3 border border-slate-200 space-y-2.5">
-        <!-- 學員所屬隊伍顯示（若學員橫跨多隊，可切換查看不同隊伍的課表） -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-xs sm:text-sm font-extrabold text-slate-700">🚩 我的所屬隊伍：</span>
-            <div id="studentTeamPills" class="flex flex-wrap gap-1"></div>
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+          <div class="flex items-center flex-wrap gap-1.5">
+            <span class="text-xs font-extrabold text-slate-600">🚩 我的所屬隊伍：</span>
+            <div id="stuMyTeamsBadges" class="flex flex-wrap gap-1"></div>
           </div>
-          <div id="studentTeamSwitcherWrap" class="hidden flex items-center gap-1.5">
-            <span class="text-xs font-bold text-slate-500 shrink-0">課表切換：</span>
-            <select id="studentTeamSelect" class="bg-blue-50 border-2 border-blue-300 text-blue-950 font-black rounded-xl p-1.5 text-xs sm:text-sm focus:outline-none"></select>
+          <!-- 若學員屬於多於一隊，可切換查看不同隊伍的訓練課表 -->
+          <div id="stuScheduleTeamSwitchWrap" class="hidden flex items-center gap-1.5 w-full sm:w-auto">
+            <span class="text-xs font-bold text-blue-800 shrink-0">切換隊伍課表：</span>
+            <select id="stuActiveTeamSelect" class="flex-1 sm:flex-initial bg-blue-50 border-2 border-blue-300 text-blue-950 font-black rounded-xl p-1.5 text-xs focus:outline-none"></select>
           </div>
         </div>
 
-        <!-- 週次切換器（最多保存最近 20 週） -->
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           <div class="flex items-center justify-between">
-            <span class="text-xs sm:text-sm font-extrabold text-slate-700">📅 查看週次（保存近 20 週）：</span>
+            <span class="text-xs sm:text-sm font-extrabold text-slate-700 pl-1">📅 查看週次（保存近 20 週）：</span>
             <button id="btnJumpThisWeek" class="sm:hidden text-xs bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-lg">返回本週</button>
           </div>
           <div class="flex items-center gap-2 flex-1 sm:max-w-md">
@@ -255,7 +268,7 @@
         <div id="starDisplay" class="text-2xl sm:text-4xl my-1.5 tracking-widest drop-shadow-sm"></div>
         <h2 id="badgeTitle" class="text-lg sm:text-2xl font-black text-amber-950 my-1.5 leading-snug"></h2>
 
-        <!-- 視覺化 7 日目標進度條（標明 4 日合格線與 7 日體能王子） -->
+        <!-- 視覺化 7 日目標進度條 -->
         <div class="max-w-md mx-auto mt-2.5 mb-2 bg-white/80 p-2.5 rounded-2xl border border-amber-300">
           <div class="flex justify-between text-[11px] font-black text-slate-600 mb-1 px-0.5">
             <span>0星</span>
@@ -282,7 +295,7 @@
             <span id="stuEditStatusBadge" class="text-xs font-extrabold px-2.5 py-1 rounded-full"></span>
           </div>
           
-          <!-- 星期日至星期六 7 日按鈕列（包含真實 日/月 與 今日 標籤，細屏幕自動縮減邊距） -->
+          <!-- 星期日至星期六 7 日按鈕列（包含真實 日/月 與 今日 標籤） -->
           <div id="dayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-4"></div>
 
           <!-- 當日訓練動作列表 -->
@@ -308,9 +321,8 @@
         </div>
       </div>
 
-      <!-- 學員子分頁 2：個人進步成長曲線 & 歷週紀錄簿（最多保存20週，超期星數永久封存） -->
+      <!-- 學員子分頁 2：個人進步成長曲線 & 歷週紀錄簿 -->
       <div id="stuTabHistory" class="hidden space-y-4">
-        <!-- 生涯數據小總結卡片 -->
         <div class="grid grid-cols-3 gap-2 sm:gap-3">
           <div class="bg-white p-3 sm:p-4 rounded-2xl border-2 border-indigo-200 text-center shadow-sm">
             <span class="text-[11px] sm:text-xs font-bold text-slate-500 block">🏆 歷史累積總星數</span>
@@ -342,7 +354,6 @@
           </div>
         </div>
 
-        <!-- 歷週紀錄列表（只保存過往 20 週，並支援展開/收合避免列表過長） -->
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 mb-3">
             <div>
@@ -357,10 +368,8 @@
         </div>
       </div>
 
-      <!-- 學員子分頁 3：成就獎章牆（清晰分為：每週成就表 ＆ 歷史永久成就表 ＆ 過往每週成就紀錄） -->
+      <!-- 學員子分頁 3：成就獎章牆（每週成就表 ＆ 歷史永久成就表 ＆ 過往每週成就紀錄） -->
       <div id="stuTabAchievements" class="hidden space-y-4">
-        
-        <!-- A. 每週成就表（每星期日刷新，並可切換查看過往每週獲得的成就） -->
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border-2 border-amber-300">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-amber-100 pb-3">
             <div>
@@ -373,7 +382,6 @@
           <div id="weeklyAchievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
         </div>
 
-        <!-- B. 歷史成就表（永久累積，絕不刷新，包含 20 週前已封存星數） -->
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border-2 border-indigo-200">
           <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-indigo-100 pb-3">
             <div>
@@ -388,13 +396,11 @@
           <div id="historicalAchievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
         </div>
 
-        <!-- C. 過往每週成就榮譽榜（讓學員一眼回顧自己近 20 週拿過的獎章） -->
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-200">
           <h3 class="text-base sm:text-xl font-black text-slate-800 mb-1">🗓️ 我的歷週成就榮譽紀錄（近 20 週）</h3>
           <p class="text-xs text-slate-500 mb-3">回顧你每一個星期努力贏返嚟嘅每週獎章！點擊可查看該週詳情</p>
           <div id="pastWeeklyBadgesTimeline" class="space-y-2.5"></div>
         </div>
-
       </div>
 
       <!-- 手機與電腦底部懸浮導航列（學員專用） -->
@@ -424,11 +430,10 @@
         <div>
           <div class="flex items-center gap-2 flex-wrap">
             <span id="staffRoleBadge" class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950">👑 總教練最高權限</span>
-            <h2 id="staffWelcomeTitle" class="text-base sm:text-lg font-black">香港特奧足球隊管理後台</h2>
+            <h2 id="staffWelcomeTitle" class="text-base sm:text-lg font-black">足球隊訓練與成長管理後台</h2>
           </div>
           <p id="staffScopeDesc" class="text-xs text-slate-300 mt-1"></p>
         </div>
-        <!-- 隊伍過濾器（總教練可選「全部隊伍」或個別隊伍；助教只可選自己獲授權的隊伍） -->
         <div class="w-full sm:w-auto flex items-center gap-2">
           <span class="text-xs font-bold text-emerald-300 shrink-0">🚩 檢視隊伍：</span>
           <select id="adminTeamFilterSelect" class="w-full sm:w-auto bg-slate-700 border-2 border-emerald-400 text-white font-black rounded-xl p-2 text-xs sm:text-sm focus:outline-none"></select>
@@ -444,13 +449,16 @@
         <button id="navBtnUsers" data-admtab="users" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm">👥 帳號密碼與權限</button>
       </div>
 
-      <!-- Admin 分頁 1：學員紀錄總覽（按隊伍過濾、顯示歷史累積總星數、匯出 CSV、成長曲線/代改） -->
+      <!-- Admin 分頁 1：學員紀錄總覽（按隊伍過濾、支援即時搜尋學員、顯示歷史累積總星數、匯出 CSV、成長曲線/代改） -->
       <div id="adminOverviewTab" class="space-y-4">
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
-          <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 mb-4">
+          <div class="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3 mb-3">
             <div>
-              <h2 id="overviewTeamHeading" class="text-lg sm:text-xl font-black text-slate-800">🏆 學員體能表現總覽</h2>
-              <p class="text-xs text-slate-500">系統自動保存最近 20 週明細，超過 20 週的星星已永久封存計入每位學員的「歷史累積總星數」</p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h2 id="overviewTeamHeading" class="text-lg sm:text-xl font-black text-slate-800">🏆 學員體能表現總覽</h2>
+                <span id="overviewStudentCountBadge" class="text-xs font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">0 人</span>
+              </div>
+              <p class="text-xs text-slate-500 mt-0.5">系統自動保存最近 20 週明細，超過 20 週的星星已永久封存計入每位學員的「歷史累積總星數」</p>
             </div>
             <div class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
               <select id="adminWeekSelect" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-xs sm:text-sm"></select>
@@ -464,21 +472,27 @@
               </button>
             </div>
           </div>
+
+          <!-- 助教與總教練共用：即時搜尋所屬隊伍學員（支援中文姓名、帳號或電話關鍵字） -->
+          <div class="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-200 mb-4 flex items-center gap-2">
+            <span class="text-base pl-1">🔍</span>
+            <input type="text" id="adminOverviewSearchInput" placeholder="搜尋隊員：輸入中文姓名（一兩個字即可）、帳號名稱或電話號碼..." class="w-full bg-transparent font-bold text-slate-800 focus:outline-none text-xs sm:text-sm">
+            <button id="btnClearOverviewSearch" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-black px-2.5 py-1 rounded-xl text-xs shrink-0">清除</button>
+          </div>
+
           <div id="allStudentsTable" class="space-y-2.5"></div>
         </div>
 
-        <!-- 檢視指定學員成長曲線 & 代為編輯紀錄 & 調整封存歷史星數面板 -->
+        <!-- 教練／助教專用：檢視指定學員成長曲線 & 代為編輯紀錄 & 調整封存歷史星數面板 -->
         <div id="coachStudentInspector" class="hidden bg-white rounded-3xl shadow-xl p-4 sm:p-5 border-4 border-emerald-500 space-y-4">
           <div class="flex justify-between items-start sm:items-center border-b pb-3 gap-2">
             <div class="min-w-0">
               <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">教練／助教專屬檢視與代改模式</span>
               <h3 id="inspectorTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1"></h3>
-              <div id="inspectorStudentTeams" class="flex flex-wrap gap-1 mt-1"></div>
             </div>
             <button id="btnCloseInspector" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-3 py-2 rounded-xl text-xs sm:text-sm shrink-0">✖ 關閉</button>
           </div>
 
-          <!-- 該學員的歷史累積總星數與封存星數管理列 -->
           <div class="bg-indigo-50 border-2 border-indigo-200 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <div class="flex items-center flex-wrap gap-2">
@@ -492,7 +506,6 @@
             </button>
           </div>
 
-          <!-- 該學員的進步成長曲線圖 -->
           <div class="bg-slate-50 rounded-2xl p-3.5 sm:p-4 border border-slate-200">
             <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3">
               <h4 class="font-black text-slate-800 text-sm sm:text-base">📈 該學員近 20 週進步成長曲線</h4>
@@ -503,7 +516,6 @@
             </div>
           </div>
 
-          <!-- 教練代改該學員當週每日打卡紀錄 -->
           <div class="bg-amber-50/70 rounded-2xl p-3.5 sm:p-4 border-2 border-amber-200">
             <div class="mb-3">
               <h4 class="font-black text-amber-950 text-sm sm:text-base">✏️ 代為查看／更正學員每日紀錄（格式：日/月）</h4>
@@ -525,22 +537,22 @@
         </div>
       </div>
 
-      <!-- Admin 分頁 2：編輯隊伍課表（總教練可選擇「同步所有隊伍」或「只應用到當前隊伍」） -->
-      <div id="adminScheduleTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100 space-y-4">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b pb-3">
+      <!-- Admin 分頁 2：編輯隊伍課表（總教練可選「同步至所有隊伍」或「只應用到當前隊伍」） -->
+      <div id="adminScheduleTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 border-b pb-3">
           <div>
-            <h2 class="text-lg sm:text-xl font-black text-slate-800">📝 編輯體能訓練課表清單</h2>
-            <p class="text-xs text-slate-500">直接修改動作名稱、目標或單位不會影響固定 ID，所有舊紀錄及成長曲線均完美保留！</p>
+            <h2 class="text-lg sm:text-xl font-black text-slate-800">📝 編輯體能訓練課表</h2>
+            <p class="text-xs text-slate-500">直接修改動作名稱、目標或單位不會影響固定 ID，舊紀錄及成長曲線均會完美保留！</p>
           </div>
           <div class="w-full sm:w-auto flex items-center gap-2 bg-emerald-50 p-2 rounded-2xl border border-emerald-200">
-            <span class="text-xs font-black text-emerald-900 shrink-0">🎯 當前編輯隊伍：</span>
-            <select id="scheduleTeamSelect" class="w-full sm:w-auto bg-white border-2 border-emerald-400 text-emerald-950 font-black rounded-xl p-1.5 text-xs sm:text-sm"></select>
+            <span class="text-xs font-black text-emerald-900 shrink-0">🎯 目標隊伍：</span>
+            <select id="scheduleTargetTeamSelect" class="w-full sm:w-auto bg-white border-2 border-emerald-400 text-emerald-950 font-black rounded-xl p-1.5 text-xs sm:text-sm"></select>
           </div>
         </div>
         
-        <div id="scheduleEditorList" class="space-y-3"></div>
+        <div id="scheduleEditorList" class="space-y-3 mb-5"></div>
         
-        <div class="bg-blue-50 p-3.5 sm:p-4 rounded-2xl border border-blue-200">
+        <div class="bg-blue-50 p-3.5 sm:p-4 rounded-2xl border border-blue-200 mb-4">
           <h4 class="font-bold text-blue-900 text-sm mb-2">➕ 新增訓練動作項目</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input type="text" id="newExName" placeholder="動作名稱（如：深蹲 🦵🏻）" class="p-2.5 border rounded-xl bg-white font-bold">
@@ -552,13 +564,12 @@
           </div>
         </div>
 
-        <!-- 儲存課表按鈕組：單一隊伍 vs 同步全部隊伍（僅總教練可見同步全部） -->
-        <div class="flex flex-col sm:flex-row gap-2.5 pt-2">
-          <button id="btnSaveScheduleSingleTeam" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm sm:text-base font-black py-3.5 px-4 rounded-2xl shadow-lg transition">
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <button id="btnSaveScheduleCurrentTeam" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm sm:text-base font-black py-3.5 px-4 rounded-2xl shadow-lg transition">
             🎯 只儲存並應用到【當前所選隊伍】
           </button>
-          <button id="btnSaveScheduleAllTeams" class="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm sm:text-base font-black py-3.5 px-4 rounded-2xl shadow-lg transition">
-            🌐 同步發佈此課表至【所有隊伍】
+          <button id="btnSaveScheduleAllTeams" class="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm sm:text-base font-black py-3.5 px-4 rounded-2xl shadow-lg transition">
+            🌐 同步發佈課表至【所有隊伍】（總教練專屬）
           </button>
         </div>
       </div>
@@ -567,16 +578,16 @@
       <div id="adminTeamsTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100 space-y-4">
         <div>
           <span class="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">👑 總教練專屬權限</span>
-          <h2 class="text-lg sm:text-xl font-black text-slate-800 mt-1">🚩 香港特奧足球隊・梯隊與隊伍管理</h2>
-          <p class="text-xs text-slate-500">你可以隨時修改現有隊伍名稱、新增未來任教的新梯隊，或刪除不再使用的隊伍。修改隊名後所有隊員會自動同步新隊名！</p>
+          <h2 class="text-lg sm:text-xl font-black text-slate-800 mt-1">🚩 足球隊・梯隊與隊伍管理</h2>
+          <p class="text-xs text-slate-500">你可以隨時修改現有隊伍名稱、新增未來任教的新學校隊伍或代表隊梯隊，或刪除不再使用的隊伍。修改隊名後所有隊員會自動同步新隊名！</p>
         </div>
 
         <div id="teamsManagerList" class="space-y-2.5"></div>
 
         <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-4">
-          <h3 class="font-black text-emerald-950 text-sm sm:text-base mb-2">➕ 新增一支代表隊／梯隊</h3>
+          <h3 class="font-black text-emerald-950 text-sm sm:text-base mb-2">➕ 新增一支球隊／學校梯隊／代表隊</h3>
           <div class="flex flex-col sm:flex-row gap-2">
-            <input type="text" id="newTeamNameInput" placeholder="例如：香港特奧 U14 梯隊 或 女子成人代表隊" class="flex-1 p-3 border-2 border-emerald-300 rounded-xl bg-white font-bold">
+            <input type="text" id="newTeamNameInput" placeholder="例如：U14 校隊、男子代表隊 或 女子組" class="flex-1 p-3 border-2 border-emerald-300 rounded-xl bg-white font-bold">
             <button id="btnAddTeam" class="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-6 py-3 rounded-xl shadow shrink-0">
               ➕ 新增隊伍
             </button>
@@ -586,8 +597,9 @@
 
       <!-- Admin 分頁 4（總教練專屬）：管理成就表 -->
       <div id="adminAchievementsTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
-        <h2 class="text-lg sm:text-xl font-black mb-1 text-slate-800">🏅 編輯成就表（每週成就 ＆ 歷史累積成就）</h2>
-        <p class="text-xs text-slate-500 mb-4">你可以自由調整「每週成就（每週刷新）」或「歷史成就（永久累積不刷新）」的名稱、圖示與目標星數。</p>
+        <span class="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">👑 總教練專屬權限</span>
+        <h2 class="text-lg sm:text-xl font-black mt-1 mb-1 text-slate-800">🏅 編輯成就表（每週成就 ＆ 歷史累積成就）</h2>
+        <p class="text-xs text-slate-500 mb-4">自由調整「每週成就（每週刷新）」或「歷史成就（永久累積不刷新）」的名稱、圖示與目標星數。</p>
 
         <div id="adminAchievementsList" class="space-y-3 mb-6"></div>
 
@@ -624,21 +636,32 @@
         </div>
       </div>
 
-      <!-- Admin 分頁 5（總教練專屬）：全員帳號、密碼重設、管理員(助教)隊伍權限分配 -->
+      <!-- Admin 分頁 5（總教練專屬）：全員帳號、搜尋、密碼重設、管理員(助教)隊伍權限分配 及 永久刪除帳號 -->
       <div id="adminUsersTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100 space-y-4">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-3">
           <div>
             <span class="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">👑 總教練最高私隱權限（助教不可見）</span>
-            <h2 class="text-lg sm:text-xl font-black mt-1 text-slate-800">👥 帳號密碼管理、職級調整 及 個別隊伍權限指派</h2>
-            <p class="text-xs text-slate-500">只有總教練能在此查看所有人的電話與密碼、幫學員重設密碼，以及隨時賦予管理員（助教）或學員一隊或多隊的權限。</p>
+            <div class="flex items-center gap-2 flex-wrap mt-1">
+              <h2 class="text-lg sm:text-xl font-black text-slate-800">👥 帳號密碼管理、職級調整、隊伍指派 及 刪除帳號</h2>
+              <span id="userAdminCountBadge" class="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">0 人</span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">只有總教練能在此搜尋及查看所有人的電話與密碼、重設密碼、指派隊伍，或永久刪除帳號及其所有資料庫紀錄。</p>
           </div>
-          <select id="userAdminRoleFilter" class="bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-xs sm:text-sm shrink-0">
+          <select id="userAdminRoleFilter" class="w-full sm:w-auto bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-xs sm:text-sm shrink-0">
             <option value="ALL">🔍 顯示所有身份（學員＋助教＋總教練）</option>
             <option value="student">⚽ 只顯示學員</option>
             <option value="admin">🛡️ 只顯示管理員（助教）</option>
             <option value="coach">👑 只顯示總教練</option>
           </select>
         </div>
+
+        <!-- 總教練專屬：搜尋總教練、管理員(助教)或學員 -->
+        <div class="bg-slate-50 p-2.5 rounded-2xl border-2 border-slate-200 flex items-center gap-2">
+          <span class="text-base pl-1">🔍</span>
+          <input type="text" id="userAdminSearchInput" placeholder="搜尋總教練／助教／學員：輸入中文姓名、帳號名稱、電話號碼或隊伍名稱..." class="w-full bg-transparent font-bold text-slate-800 focus:outline-none text-xs sm:text-sm">
+          <button id="btnClearUserAdminSearch" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-black px-2.5 py-1 rounded-xl text-xs shrink-0">清除</button>
+        </div>
+
         <div id="userAdminList" class="space-y-3"></div>
       </div>
 
@@ -650,7 +673,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { 
-      initializeFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where 
+      getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where 
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     // 將公開識別用的 Firebase Web API Key 拆段組合，避免 GitHub Secret Scanning 誤判發出警告電郵
@@ -666,16 +689,14 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    // 強制啟用 experimentalAutoDetectLongPolling，徹底解決手機行動網絡、球場或機構 Wi-Fi 下 WebChannel 卡死問題
-    const db = initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true
-    });
+    const db = getFirestore(app);
 
-    // ==================== 常數設定：最多保存過往 20 週紀錄 ====================
+    // 常數設定：最多保存過往 20 週紀錄
     const MAX_RETENTION_WEEKS = 20;
     const SESSION_STORAGE_KEY = "sen_football_session_v4";
+    const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v1";
 
-    // ==================== 自訂無障礙彈窗與 UI 輔助（零原生 alert/confirm/prompt） ====================
+    // 自訂無障礙彈窗與 UI 輔助
     function showLoading(text = "正在連線同步資料...") {
       const overlay = document.getElementById("globalLoadingOverlay");
       const label = document.getElementById("loadingStatusText");
@@ -693,7 +714,7 @@
       const banner = document.getElementById("toastBanner");
       if (!banner) return;
       banner.innerText = msg;
-      banner.className = `fixed top-16 left-1/2 -translate-x-1/2 z-40 max-w-[92vw] w-max px-4 py-3 rounded-2xl shadow-2xl border-2 text-sm font-black text-center transition-all ${
+      banner.className = `fixed safe-top-toast left-1/2 -translate-x-1/2 z-40 max-w-[92vw] w-max px-4 py-3 rounded-2xl shadow-2xl border-2 text-sm font-black text-center transition-all ${
         isError ? 'bg-rose-700 text-white border-rose-300' : 'bg-slate-900 text-white border-emerald-400'
       }`;
       banner.classList.remove("hidden");
@@ -701,17 +722,17 @@
       toastTimer = setTimeout(() => banner.classList.add("hidden"), 3800);
     }
 
-    function openCustomModal({ 
-      icon = "🌟", 
-      title = "提示", 
-      message = "", 
-      showInput = false, 
-      inputValue = "", 
-      inputPlaceholder = "", 
-      checkboxOptions = null, // [{ id, name, checked }]
-      showCancel = false, 
-      confirmText = "確定", 
-      cancelText = "取消" 
+    function openCustomModal({
+      icon = "🌟",
+      title = "提示",
+      message = "",
+      showInput = false,
+      inputValue = "",
+      inputPlaceholder = "",
+      checkboxOptions = null,
+      showCancel = false,
+      confirmText = "確定",
+      cancelText = "取消"
     }) {
       return new Promise((resolve) => {
         const overlay = document.getElementById("customModalOverlay");
@@ -738,12 +759,12 @@
           inputWrap.classList.add("hidden");
         }
 
-        if (Array.isArray(checkboxOptions)) {
+        if (Array.isArray(checkboxOptions) && checkboxOptions.length > 0) {
           checkboxesWrap.classList.remove("hidden");
           checkboxesWrap.innerHTML = checkboxOptions.map(opt => `
-            <label class="flex items-center gap-2.5 p-2.5 bg-white border-2 border-slate-200 rounded-xl cursor-pointer hover:border-emerald-400 transition">
-              <input type="checkbox" value="${opt.id}" ${opt.checked ? 'checked' : ''} class="modal-team-cb w-5 h-5 rounded text-emerald-600">
-              <span class="font-black text-slate-800 text-sm">${opt.name}</span>
+            <label class="flex items-center gap-3 p-2.5 bg-white rounded-xl border-2 border-slate-200 hover:border-emerald-400 cursor-pointer select-none">
+              <input type="checkbox" value="${opt.id}" ${opt.checked ? 'checked' : ''} class="modal-chk-item w-5 h-5 accent-emerald-600 rounded">
+              <span class="font-black text-slate-800 text-sm">${opt.label}</span>
             </label>
           `).join("");
         } else {
@@ -768,14 +789,14 @@
         };
 
         btnConfirm.onclick = () => {
-          let val = true;
+          let result = true;
           if (showInput) {
-            val = inputField.value;
+            result = inputField.value;
           } else if (Array.isArray(checkboxOptions)) {
-            val = Array.from(checkboxesWrap.querySelectorAll(".modal-team-cb:checked")).map(cb => cb.value);
+            result = Array.from(checkboxesWrap.querySelectorAll(".modal-chk-item:checked")).map(el => el.value);
           }
           cleanup();
-          resolve(val);
+          resolve(result);
         };
 
         btnCancel.onclick = () => {
@@ -791,22 +812,31 @@
       });
     }
 
-    // 自動重試包裝器：當手機網絡瞬間不穩時自動重試 3 次
-    async function withRetry(fn, retries = 3, delayMs = 600) {
+    // 單次請求超時保護（防止任何單一網絡請求卡住超過 8 秒）
+    function withTimeout(promise, ms = 8000) {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), ms))
+      ]);
+    }
+
+    // 自動重試包裝器
+    async function withRetry(fn, retries = 2, delayMs = 400) {
       let lastErr;
       for (let i = 0; i < retries; i++) {
         try {
-          return await fn();
+          return await withTimeout(fn(), 8000);
         } catch (err) {
           lastErr = err;
           console.warn(`Firestore 請求重試中 (${i + 1}/${retries})...`, err);
-          await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+          if (i < retries - 1) {
+            await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+          }
         }
       }
       throw lastErr;
     }
 
-    // ==================== STREAMING_CHUNK:Defining date helpers, password hashing, and 3-tier role validators... ====================
     function formatLocalYMD(d = new Date()) {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -820,7 +850,6 @@
       return formatLocalYMD(copy);
     }
 
-    // 根據週次 ID (YYYY-MM-DD, 星期日) 及 dayIndex (0-6)，計算出真實「日/月」（如 21/10）
     function getDayDateInfo(weekIdStr, dayIdx) {
       const parts = weekIdStr.split("-").map(Number);
       const dt = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -829,7 +858,7 @@
       const monthNum = dt.getMonth() + 1;
       const ymd = formatLocalYMD(dt);
       return {
-        ddmm: `${dayNum}/${monthNum}`, // 香港習慣：日/月（例如 21/10）
+        ddmm: `${dayNum}/${monthNum}`,
         ymd,
         isToday: ymd === formatLocalYMD(new Date())
       };
@@ -863,14 +892,36 @@
       return "h_" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
     }
 
-    // 驗證授權碼：COACH888 -> 總教練 ('coach')；ADMIN888 -> 管理員/助教 ('admin')；其他/留空 -> 學員 ('student')
-    function detectRoleFromAuthCode(codeStr) {
-      const clean = (codeStr || "").trim().toUpperCase();
-      const headCoachCode = [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join(''); // COACH888
-      const teamAdminCode = [65, 68, 77, 73, 78, 56, 56, 56].map(c => String.fromCharCode(c)).join(''); // ADMIN888
-      if (clean === headCoachCode) return "coach";
-      if (clean === teamAdminCode) return "admin";
+    // 驗證授權碼：COACH888 -> 'coach' (總教練), ADMIN888 -> 'admin' (管理員/助教), 留空 -> 'student' (學員)
+    function detectRoleByAuthCode(input) {
+      const clean = String(input || "").trim().toUpperCase();
+      const coachExpected = [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
+      const adminExpected = [65, 68, 77, 73, 78, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
+      if (clean === coachExpected) return "coach";
+      if (clean === adminExpected) return "admin";
       return "student";
+    }
+
+    function isHeadCoach(user = currentUser) {
+      return Boolean(user && user.role === "coach");
+    }
+
+    function isStaff(user = currentUser) {
+      return Boolean(user && (user.role === "coach" || user.role === "admin"));
+    }
+
+    function requireStaff() {
+      if (!isStaff()) {
+        showToast("⚠️ 權限不足：此操作只限總教練或管理員執行！", true);
+        throw new Error("Unauthorized");
+      }
+    }
+
+    function requireHeadCoach() {
+      if (!isHeadCoach()) {
+        showToast("⚠️ 權限不足：此操作只限「總教練」執行！", true);
+        throw new Error("Unauthorized: Head Coach Only");
+      }
     }
 
     function getRoleLabel(role) {
@@ -879,29 +930,7 @@
       return "⚽ 學員";
     }
 
-    function isHeadCoach() {
-      return currentUser && currentUser.role === "coach";
-    }
-
-    function isStaff() {
-      return currentUser && (currentUser.role === "coach" || currentUser.role === "admin");
-    }
-
-    function requireStaff() {
-      if (!isStaff()) {
-        showToast("⚠️ 權限不足：此操作只限總教練或管理員（助教）執行！", true);
-        throw new Error("Unauthorized Staff");
-      }
-    }
-
-    function requireHeadCoach() {
-      if (!isHeadCoach()) {
-        showToast("⚠️ 權限不足：此操作只限【總教練】執行！", true);
-        throw new Error("Unauthorized Head Coach");
-      }
-    }
-
-    // ==================== 系統狀態變數 ====================
+    // 系統狀態變數
     const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
     const shortDayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     const thisWeekId = getSundayOfDate(new Date());
@@ -909,13 +938,13 @@
     const allowed20Weeks = getAllowed20WeeksList();
     const oldestAllowedWeekId = allowed20Weeks[allowed20Weeks.length - 1];
 
-    // 預設香港特奧足球隊梯隊清單（總教練可隨時在後台新增、改名或刪除）
+    // 預設足球隊梯隊清單（總教練可隨時在後台新增、改名或刪除）
     let teamsList = [
-      { id: "team_hk_men", name: "香港特奧男子代表隊" },
-      { id: "team_hk_women", name: "香港特奧女子代表隊" },
-      { id: "team_youth_a", name: "特奧青年梯隊 (A隊)" },
-      { id: "team_youth_b", name: "特奧發展梯隊 (B隊)" },
-      { id: "team_unified", name: "特奧融合足球隊" }
+      { id: "team_hk_men", name: "男子代表隊" },
+      { id: "team_hk_women", name: "女子代表隊" },
+      { id: "team_youth_a", name: "青年梯隊 (A隊)" },
+      { id: "team_youth_b", name: "發展梯隊 (B隊)" },
+      { id: "team_unified", name: "融合／校隊梯隊" }
     ];
 
     let currentUser = null;
@@ -924,10 +953,9 @@
     let selectedAchWeekId = thisWeekId;
     let showAll20WeeksHistory = false;
 
-    // 學員端當前選擇的課表隊伍 ID；教練端當前過濾的隊伍 ID ('ALL' 或 teamId)
-    let studentActiveTeamId = "team_hk_men";
+    let studentActiveTeamId = null;
     let adminFilterTeamId = "ALL";
-    let scheduleEditTeamId = "team_hk_men";
+    let scheduleEditTeamId = null;
 
     let exerciseCatalog = {
       "ex_001": { id: "ex_001", name: "深蹲 🦵🏻", target: 20, unit: "下" },
@@ -963,19 +991,38 @@
     let stuGrowthChartInstance = null;
     let coachGrowthChartInstance = null;
 
-    // 輔助：取得用戶的隊伍陣列（兼容舊資料）
-    function getUserTeamIds(userObj) {
-      if (!userObj) return [];
-      if (Array.isArray(userObj.teamIds) && userObj.teamIds.length > 0) {
-        return userObj.teamIds;
-      }
-      // 舊帳號若未設定隊伍，預設歸入第一支隊伍以便管理
-      return teamsList.length > 0 ? [teamsList[0].id] : ["team_hk_men"];
+    function getTeamNameById(teamId) {
+      const found = teamsList.find(t => t.id === teamId);
+      return found ? found.name : "未分類隊伍";
     }
 
-    function getTeamNameById(tId) {
-      const found = teamsList.find(t => t.id === tId);
-      return found ? found.name : "未分類隊伍";
+    function getUserTeamIds(userObj) {
+      if (!userObj) return [];
+      if (userObj.role === "coach") return teamsList.map(t => t.id);
+      if (Array.isArray(userObj.teamIds) && userObj.teamIds.length > 0) {
+        const valid = userObj.teamIds.filter(tid => teamsList.some(t => t.id === tid));
+        if (valid.length > 0) return valid;
+      }
+      return teamsList.length > 0 ? [teamsList[0].id] : [];
+    }
+
+    function getAuthorizedTeamsForCurrentStaff() {
+      if (isHeadCoach()) return teamsList;
+      const myIds = getUserTeamIds(currentUser);
+      return teamsList.filter(t => myIds.includes(t.id));
+    }
+
+    function canStaffAccessStudent(studentObj, filterTeamId = "ALL") {
+      const stuTeams = getUserTeamIds(studentObj);
+      if (isHeadCoach()) {
+        if (filterTeamId === "ALL") return true;
+        return stuTeams.includes(filterTeamId);
+      }
+      const adminAllowedTeams = getUserTeamIds(currentUser);
+      if (filterTeamId !== "ALL") {
+        return adminAllowedTeams.includes(filterTeamId) && stuTeams.includes(filterTeamId);
+      }
+      return stuTeams.some(tid => adminAllowedTeams.includes(tid));
     }
 
     function getBadgeInfo(stars) {
@@ -1002,7 +1049,6 @@
       return undefined;
     }
 
-    // ==================== STREAMING_CHUNK:Implementing 20-week rolling log pruning and permanent star archiving... ====================
     async function fetchAndPruneUserLogs20Weeks(userObj) {
       const uid = userObj.id;
       const q = query(collection(db, "logs"), where("userId", "==", uid));
@@ -1073,8 +1119,31 @@
       return total;
     }
 
-    // ==================== 載入基礎設定（含隊伍清單、動作字典、成就表） ====================
+    function loadSettingsFromLocalCache() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.teamsList) && parsed.teamsList.length > 0) teamsList = parsed.teamsList;
+        if (parsed.exerciseCatalog) exerciseCatalog = { ...exerciseCatalog, ...parsed.exerciseCatalog };
+        if (Array.isArray(parsed.achievementsList) && parsed.achievementsList.length > 0) achievementsList = parsed.achievementsList;
+      } catch (e) {}
+    }
+
+    function saveSettingsToLocalCache() {
+      try {
+        localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({
+          teamsList,
+          exerciseCatalog,
+          achievementsList
+        }));
+      } catch (e) {}
+    }
+
     async function loadGlobalSettings() {
+      loadSettingsFromLocalCache();
+      renderRegistrationTeamCheckboxes();
+
       const [teamsSnap, catSnap, achSnap] = await withRetry(() => Promise.all([
         getDoc(doc(db, "settings", "teams")),
         getDoc(doc(db, "settings", "exercise_catalog")),
@@ -1084,8 +1153,7 @@
       if (teamsSnap.exists() && Array.isArray(teamsSnap.data().list) && teamsSnap.data().list.length > 0) {
         teamsList = teamsSnap.data().list;
       } else {
-        // 首次初始化寫入預設特奧隊伍清單
-        await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+        setDoc(doc(db, "settings", "teams"), { list: teamsList }).catch(() => {});
       }
 
       if (catSnap.exists() && catSnap.data().catalog) {
@@ -1095,10 +1163,10 @@
         achievementsList = achSnap.data().list;
       }
 
+      saveSettingsToLocalCache();
       renderRegistrationTeamCheckboxes();
     }
 
-    // 載入指定週次及指定隊伍的課表（優先讀取 隊伍週課表 -> 全隊週課表 -> 隊伍預設課表 -> 全隊預設課表）
     async function loadScheduleForWeek(wId, teamId = null) {
       const fallbackOrder = [];
       if (teamId && teamId !== "ALL") {
@@ -1108,9 +1176,12 @@
       fallbackOrder.push(wId);
       fallbackOrder.push("default");
 
+      const snaps = await withRetry(() => Promise.all(
+        fallbackOrder.map(docKey => getDoc(doc(db, "schedules", docKey)))
+      ));
+
       let rawList = null;
-      for (const docKey of fallbackOrder) {
-        const snap = await withRetry(() => getDoc(doc(db, "schedules", docKey)));
+      for (const snap of snaps) {
         if (snap.exists() && Array.isArray(snap.data().exercises) && snap.data().exercises.length > 0) {
           rawList = snap.data().exercises;
           break;
@@ -1127,16 +1198,36 @@
       }
     }
 
-    // ==================== STREAMING_CHUNK:Implementing login, registration with dynamic team selection, and persistent session... ====================
     function renderRegistrationTeamCheckboxes() {
-      const container = document.getElementById("regTeamsCheckboxes");
+      const container = document.getElementById("regTeamsCheckboxList");
       if (!container) return;
-      container.innerHTML = teamsList.map((t, idx) => `
-        <label class="flex items-center gap-2.5 p-2.5 bg-white border-2 border-blue-200 rounded-xl cursor-pointer hover:border-blue-500 transition">
-          <input type="checkbox" value="${t.id}" ${idx === 0 ? 'checked' : ''} class="reg-team-cb w-5 h-5 rounded text-blue-600">
-          <span class="text-xs sm:text-sm font-black text-slate-800">${t.name}</span>
+      container.innerHTML = teamsList.map(t => `
+        <label class="flex items-center gap-2.5 p-2.5 bg-white rounded-xl border-2 border-blue-200 hover:border-blue-400 cursor-pointer select-none transition">
+          <input type="checkbox" value="${t.id}" class="reg-team-chk w-5 h-5 accent-blue-600 rounded">
+          <span class="font-black text-slate-800 text-xs sm:text-sm">🚩 ${t.name}</span>
         </label>
       `).join("");
+    }
+
+    function updateRegistrationCodeUI() {
+      const codeInput = document.getElementById("regCoachCode")?.value || "";
+      const role = detectRoleByAuthCode(codeInput);
+      const hintEl = document.getElementById("regRoleDetectHint");
+      const teamWrap = document.getElementById("regTeamSelectWrap");
+
+      if (role === "coach") {
+        hintEl.className = "text-xs font-black text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg mt-1.5";
+        hintEl.innerText = "👑 已識別為【總教練】授權碼！總教練自動管轄所有隊伍，無需填寫所屬隊伍。";
+        teamWrap.classList.add("hidden");
+      } else if (role === "admin") {
+        hintEl.className = "text-xs font-black text-purple-800 bg-purple-100 px-2.5 py-1 rounded-lg mt-1.5";
+        hintEl.innerText = "🛡️ 已識別為【管理員／助教】授權碼！請在下方勾選你負責協助的隊伍（可多選）：";
+        teamWrap.classList.remove("hidden");
+      } else {
+        hintEl.className = "text-xs font-black text-emerald-700 mt-1";
+        hintEl.innerText = "目前註冊身份：⚽ 隊員（學員）— 請在下方勾選你所屬的隊伍（可選多於一隊）";
+        teamWrap.classList.remove("hidden");
+      }
     }
 
     function saveUserSession(userObj) {
@@ -1152,9 +1243,7 @@
           totalStars: Number(userObj.totalStars || 0),
           savedAt: Date.now()
         }));
-      } catch (e) {
-        console.warn("無法寫入 localStorage:", e);
-      }
+      } catch (e) {}
     }
 
     function clearUserSession() {
@@ -1164,13 +1253,8 @@
     }
 
     async function restoreSessionOnBoot() {
-      // 先載入全域隊伍設定，讓註冊頁也能即時顯示最新隊伍清單
-      try {
-        await loadGlobalSettings();
-      } catch (e) {
-        console.warn("初始載入隊伍清單略過：", e);
-        renderRegistrationTeamCheckboxes();
-      }
+      loadSettingsFromLocalCache();
+      renderRegistrationTeamCheckboxes();
 
       let cached = null;
       try {
@@ -1178,20 +1262,25 @@
         if (raw) cached = JSON.parse(raw);
       } catch (e) {}
 
-      if (!cached || !cached.id) return;
+      if (!cached || !cached.id) {
+        loadGlobalSettings().catch(() => {});
+        return;
+      }
 
-      showLoading(`歡迎回來，${cached.chineseName}！正在自動登入...`);
+      showLoading(`歡迎回來，${cached.chineseName}！正在極速載入...`);
       try {
         const userSnap = await withRetry(() => getDoc(doc(db, "users", cached.id)));
         if (userSnap.exists()) {
           currentUser = { id: userSnap.id, ...userSnap.data() };
           saveUserSession(currentUser);
+          await enterApp();
         } else {
-          currentUser = cached;
+          clearUserSession();
+          currentUser = null;
+          showToast("⚠️ 此帳號已不存在或已被移除，請重新登入。", true);
         }
-        await enterApp();
       } catch (err) {
-        console.warn("自動恢復連線失敗，使用本地快取身份進入：", err);
+        console.warn("自動恢復連線較慢，使用本地快取身份進入：", err);
         currentUser = cached;
         await enterApp();
       } finally {
@@ -1204,7 +1293,7 @@
       const username = document.getElementById("regUsername").value.trim();
       const phone = document.getElementById("regPhone").value.trim();
       const password = document.getElementById("regPassword").value.trim();
-      const authCode = document.getElementById("regAuthCode").value.trim();
+      const coachCode = document.getElementById("regCoachCode").value.trim();
       const errBox = document.getElementById("regErrorMsg");
       errBox.classList.add("hidden");
 
@@ -1214,22 +1303,18 @@
         return;
       }
 
-      const role = detectRoleFromAuthCode(authCode);
-      if (authCode && role === "student") {
+      const role = detectRoleByAuthCode(coachCode);
+      if (coachCode && role === "student") {
         errBox.innerText = "⚠️ 你輸入的身份授權碼不正確！如你是學員請將授權碼留空。";
         errBox.classList.remove("hidden");
         return;
       }
 
-      // 總教練免填隊伍；管理員(助教)與學員必須至少勾選一隊
-      let selectedTeamIds = [];
-      if (role !== "coach") {
-        selectedTeamIds = Array.from(document.querySelectorAll(".reg-team-cb:checked")).map(cb => cb.value);
-        if (selectedTeamIds.length === 0) {
-          errBox.innerText = "⚠️ 請至少勾選一隊你所屬的隊伍！";
-          errBox.classList.remove("hidden");
-          return;
-        }
+      const selectedTeamIds = Array.from(document.querySelectorAll(".reg-team-chk:checked")).map(el => el.value);
+      if (role !== "coach" && selectedTeamIds.length === 0) {
+        errBox.innerText = "⚠️ 請至少勾選一支你所屬或負責的隊伍！";
+        errBox.classList.remove("hidden");
+        return;
       }
 
       showLoading("正在為你建立帳號...");
@@ -1260,8 +1345,8 @@
           usernameLower,
           phone,
           passwordHash,
-          role, // 'coach' | 'admin' | 'student'
-          teamIds: selectedTeamIds,
+          role,
+          teamIds: role === "coach" ? [] : selectedTeamIds,
           needHelp: false,
           archivedStars: 0,
           totalStars: 0,
@@ -1324,7 +1409,7 @@
                                 (userData.password && userData.password === pwd);
 
         if (!isPasswordValid) {
-          errBox.innerText = "❌ 密碼唔啱喎！請再試一次，或者按下方「忘記密碼」通知總教練幫手。";
+          errBox.innerText = "❌ 密碼唔啱喎！請再試一次，或者按下方「忘記密碼」通知教練幫手。";
           errBox.classList.remove("hidden");
           return;
         }
@@ -1342,7 +1427,7 @@
         await enterApp();
       } catch (err) {
         console.error("Login error:", err);
-        errBox.innerText = "⚠️ 網絡連線稍慢，系統未能拉取資料，請再按一次「登入系統」！";
+        errBox.innerText = "⚠️ 網絡連線稍慢，請再按一次「登入系統」！";
         errBox.classList.remove("hidden");
       } finally {
         hideLoading();
@@ -1395,7 +1480,6 @@
       }
     }
 
-    // ==================== STREAMING_CHUNK:Initializing app view and student multi-team workout dashboard... ====================
     async function enterApp() {
       document.getElementById("authSection").classList.add("hidden");
       document.getElementById("userHeader").classList.remove("hidden");
@@ -1409,7 +1493,7 @@
         document.getElementById("studentSection").classList.remove("hidden");
       }
 
-      showLoading("正在載入隊伍設定、課表與體能紀錄...");
+      showLoading("正在載入隊伍設定與體能紀錄...");
       try {
         await loadGlobalSettings();
 
@@ -1426,33 +1510,31 @@
       }
     }
 
-    // ==================== 3. 學員端功能 ====================
     async function initStudentDashboard() {
-      const prunedResult = await fetchAndPruneUserLogs20Weeks(currentUser);
-      studentLogsMap = prunedResult.logsMap;
-      saveUserSession(currentUser);
-
-      // 處理學員所屬隊伍標籤與課表切換器
       const myTeamIds = getUserTeamIds(currentUser);
-      studentActiveTeamId = myTeamIds[0];
+      studentActiveTeamId = myTeamIds[0] || (teamsList[0]?.id || null);
 
-      const pillsEl = document.getElementById("studentTeamPills");
-      pillsEl.innerHTML = myTeamIds.map(tid => 
-        `<span class="text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full">${getTeamNameById(tid)}</span>`
+      const badgesEl = document.getElementById("stuMyTeamsBadges");
+      badgesEl.innerHTML = myTeamIds.map(tid => 
+        `<span class="text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full">🚩 ${getTeamNameById(tid)}</span>`
       ).join("");
 
-      const switcherWrap = document.getElementById("studentTeamSwitcherWrap");
-      const teamSelectEl = document.getElementById("studentTeamSelect");
+      const switchWrap = document.getElementById("stuScheduleTeamSwitchWrap");
+      const activeTeamSelect = document.getElementById("stuActiveTeamSelect");
       if (myTeamIds.length > 1) {
-        switcherWrap.classList.remove("hidden");
-        teamSelectEl.innerHTML = myTeamIds.map(tid => 
-          `<option value="${tid}">${getTeamNameById(tid)} 課表</option>`
+        switchWrap.classList.remove("hidden");
+        activeTeamSelect.innerHTML = myTeamIds.map(tid => 
+          `<option value="${tid}" ${tid === studentActiveTeamId ? 'selected' : ''}>${getTeamNameById(tid)} 課表</option>`
         ).join("");
       } else {
-        switcherWrap.classList.add("hidden");
+        switchWrap.classList.add("hidden");
       }
 
       await loadScheduleForWeek(thisWeekId, studentActiveTeamId);
+
+      const prunedResult = await fetchAndPruneUserLogs20Weeks(currentUser);
+      studentLogsMap = prunedResult.logsMap;
+      saveUserSession(currentUser);
 
       const weeks = allowed20Weeks;
       const selectEl = document.getElementById("studentWeekSelect");
@@ -1502,11 +1584,9 @@
 
     function populateExerciseSelectors() {
       const dailySelect = document.getElementById("stuDailyChartExSelect");
-      if (dailySelect) {
-        dailySelect.innerHTML = currentSchedule.map(ex => 
-          `<option value="${ex.id}">${ex.name}（單位：${ex.unit}）</option>`
-        ).join("");
-      }
+      dailySelect.innerHTML = currentSchedule.map(ex => 
+        `<option value="${ex.id}">${ex.name}（單位：${ex.unit}）</option>`
+      ).join("");
 
       const allExList = Object.values(exerciseCatalog);
       const growthOptions = [
@@ -1514,8 +1594,7 @@
         ...allExList.map(ex => `<option value="${ex.id}">📈 ${ex.name} — 歷週表現趨勢（單位：${ex.unit}）</option>`)
       ].join("");
 
-      const stuGrowthSel = document.getElementById("stuGrowthMetricSelect");
-      if (stuGrowthSel) stuGrowthSel.innerHTML = growthOptions;
+      document.getElementById("stuGrowthMetricSelect").innerHTML = growthOptions;
       const coachGrowthSel = document.getElementById("coachGrowthMetricSelect");
       if (coachGrowthSel) coachGrowthSel.innerHTML = growthOptions;
     }
@@ -1568,7 +1647,6 @@
       renderStudentDailyChart(weekDaysObj);
     }
 
-    // 7 日按鈕：嚴格顯示「週三 21/10」格式（日/月），並標示「今日」，細屏幕自動縮減邊距防止爆版
     function renderStudentDayTabs(weekDaysObj, isCurrentWeek) {
       const container = document.getElementById("dayTabs");
       container.innerHTML = shortDayNames.map((shortName, idx) => {
@@ -1647,8 +1725,7 @@
         return showToast("⚠️ 教練尚未設定本週課表！", true);
       }
 
-      const existingRecords = studentLogsMap[thisWeekId]?.[currentDayIndex]?.records || {};
-      const records = { ...existingRecords };
+      const records = { ...(studentLogsMap[thisWeekId]?.[currentDayIndex]?.records || {}) };
       let totalEntered = 0;
       currentSchedule.forEach(ex => {
         const inputEl = document.getElementById(`stu_ex_input_${ex.id}`);
@@ -1695,7 +1772,6 @@
       }
     }
 
-    // ==================== STREAMING_CHUNK:Rendering daily bar charts, 20-week growth curves, and split achievements... ====================
     function renderStudentDailyChart(weekDaysObj) {
       const ctx = document.getElementById("studentDailyChart");
       const selectedExId = document.getElementById("stuDailyChartExSelect").value || currentSchedule[0]?.id;
@@ -2029,67 +2105,40 @@
       });
     }
 
-    // ==================== STREAMING_CHUNK:Implementing Head Coach vs. Assistant Coach (Admin) backend isolation and team management... ====================
-    // 取得當前管理員/總教練獲授權管理的隊伍清單
-    function getAuthorizedTeamsForCurrentStaff() {
-      if (isHeadCoach()) return teamsList;
-      const myIds = getUserTeamIds(currentUser);
-      return teamsList.filter(t => myIds.includes(t.id));
-    }
-
-    // 判斷某學員是否屬於當前教練/助教可檢視的隊伍範圍
-    function canStaffAccessStudent(studentObj, filterTeamId) {
-      const stuTeams = getUserTeamIds(studentObj);
-      if (isHeadCoach()) {
-        if (filterTeamId === "ALL") return true;
-        return stuTeams.includes(filterTeamId);
-      } else {
-        // 管理員（助教）只能看自己獲授權隊伍內的學員
-        const allowedIds = getAuthorizedTeamsForCurrentStaff().map(t => t.id);
-        if (filterTeamId && filterTeamId !== "ALL") {
-          return allowedIds.includes(filterTeamId) && stuTeams.includes(filterTeamId);
-        }
-        return stuTeams.some(tid => allowedIds.includes(tid));
-      }
-    }
-
     async function initAdminDashboard() {
       requireStaff();
-      await loadAdminUsersAndSecrets();
 
-      // 設定頂部身份橫幅與導航按鈕可見度（管理員/助教隱藏「梯隊管理」、「成就編輯」及「帳號密碼管理」）
       const roleBadge = document.getElementById("staffRoleBadge");
       const scopeDesc = document.getElementById("staffScopeDesc");
-      const navBtnTeams = document.getElementById("navBtnTeams");
-      const navBtnAchievements = document.getElementById("navBtnAchievements");
-      const navBtnUsers = document.getElementById("navBtnUsers");
-      const btnSaveScheduleAllTeams = document.getElementById("btnSaveScheduleAllTeams");
-      const adminNavGrid = document.getElementById("adminNavGrid");
-
-      const authTeams = getAuthorizedTeamsForCurrentStaff();
+      const navGrid = document.getElementById("adminNavGrid");
+      const btnTeams = document.getElementById("navBtnTeams");
+      const btnAch = document.getElementById("navBtnAchievements");
+      const btnUsers = document.getElementById("navBtnUsers");
+      const btnSyncAllSchedule = document.getElementById("btnSaveScheduleAllTeams");
 
       if (isHeadCoach()) {
         roleBadge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950";
         roleBadge.innerText = "👑 總教練最高權限";
-        scopeDesc.innerText = "你擁有全隊最高權限：可檢視所有梯隊、管理隊伍名單、同步或獨立發佈各隊課表，以及查閱全隊密碼與指派助教隊伍。";
-        navBtnTeams.classList.remove("hidden");
-        navBtnAchievements.classList.remove("hidden");
-        navBtnUsers.classList.remove("hidden");
-        btnSaveScheduleAllTeams.classList.remove("hidden");
-        adminNavGrid.className = "grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200";
+        scopeDesc.innerText = "你擁有全系統最高權限：可檢視所有隊伍、管理梯隊名稱、同步全隊課表、搜尋及管理所有帳號密碼與權限。";
+        navGrid.className = "grid grid-cols-2 sm:grid-cols-5 gap-1.5 sm:gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200";
+        btnTeams.classList.remove("hidden");
+        btnAch.classList.remove("hidden");
+        btnUsers.classList.remove("hidden");
+        btnSyncAllSchedule.classList.remove("hidden");
       } else {
-        roleBadge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-400 text-slate-950";
+        const myTeamNames = getAuthorizedTeamsForCurrentStaff().map(t => t.name).join("、") || "尚未指派隊伍";
+        roleBadge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-purple-400 text-slate-950";
         roleBadge.innerText = "🛡️ 管理員（助教）權限";
-        const teamNamesStr = authTeams.map(t => t.name).join("、") || "尚未指派隊伍";
-        scopeDesc.innerText = `你目前負責管理的隊伍：【${teamNamesStr}】。為保障其他隊伍私隱，系統只會顯示你所屬隊伍的學員訓練數據。`;
-        navBtnTeams.classList.add("hidden");
-        navBtnAchievements.classList.add("hidden");
-        navBtnUsers.classList.add("hidden");
-        btnSaveScheduleAllTeams.classList.add("hidden");
-        adminNavGrid.className = "grid grid-cols-2 gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200";
+        scopeDesc.innerText = `你獲授權協助的隊伍：【${myTeamNames}】。為保障私隱，你只可檢視及管理所屬隊伍學員的訓練數據。`;
+        navGrid.className = "grid grid-cols-2 gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200";
+        btnTeams.classList.add("hidden");
+        btnAch.classList.add("hidden");
+        btnUsers.classList.add("hidden");
+        btnSyncAllSchedule.classList.add("hidden");
       }
 
       populateAdminTeamSelectors();
+      await loadAdminUsersAndSecrets();
 
       const admSelect = document.getElementById("adminWeekSelect");
       admSelect.innerHTML = allowed20Weeks.map((w, idx) => 
@@ -2097,7 +2146,13 @@
       ).join("");
 
       await loadAdminWeekOverview(thisWeekId);
-      await loadScheduleForScheduleEditor();
+
+      if (scheduleEditTeamId) {
+        await loadScheduleForWeek(selectedWeekId, scheduleEditTeamId);
+      }
+      populateExerciseSelectors();
+      renderScheduleEditor();
+
       if (isHeadCoach()) {
         renderTeamsManager();
         renderAdminAchievements();
@@ -2108,18 +2163,18 @@
     function populateAdminTeamSelectors() {
       const authTeams = getAuthorizedTeamsForCurrentStaff();
       const filterSelect = document.getElementById("adminTeamFilterSelect");
-      const scheduleTeamSelect = document.getElementById("scheduleTeamSelect");
+      const scheduleTeamSelect = document.getElementById("scheduleTargetTeamSelect");
 
       if (isHeadCoach()) {
         filterSelect.innerHTML = [
-          `<option value="ALL">🌐 全部隊伍（全隊總覽）</option>`,
+          `<option value="ALL">🌐 全部隊伍（共 ${teamsList.length} 隊）</option>`,
           ...teamsList.map(t => `<option value="${t.id}">🚩 ${t.name}</option>`)
         ].join("");
         adminFilterTeamId = "ALL";
       } else {
         if (authTeams.length > 1) {
           filterSelect.innerHTML = [
-            `<option value="ALL">🚩 我負責的所有隊伍 (${authTeams.length}隊)</option>`,
+            `<option value="ALL">🚩 我負責的全部隊伍（${authTeams.length} 隊）</option>`,
             ...authTeams.map(t => `<option value="${t.id}">🚩 ${t.name}</option>`)
           ].join("");
           adminFilterTeamId = "ALL";
@@ -2138,15 +2193,10 @@
       }
     }
 
-    /**
-     * 載入用戶與紀錄：
-     * - 只有【總教練】會拉取 `user_secrets`（明文密碼表），管理員（助教）絕不拉取密碼表，從根源保障私隱！
-     */
     async function loadAdminUsersAndSecrets() {
       requireStaff();
       const queries = [
-        getDocs(collection(db, "users")),
-        getDocs(collection(db, "logs"))
+        getDocs(collection(db, "users"))
       ];
       if (isHeadCoach()) {
         queries.push(getDocs(collection(db, "user_secrets")));
@@ -2154,8 +2204,7 @@
 
       const results = await withRetry(() => Promise.all(queries));
       const uSnap = results[0];
-      const allLogsSnap = results[1];
-      const sSnap = results[2] || null;
+      const sSnap = results[1] || null;
 
       adminUsersList = [];
       uSnap.forEach(d => adminUsersList.push({ id: d.id, ...d.data() }));
@@ -2163,47 +2212,6 @@
       adminSecretsMap = {};
       if (sSnap) {
         sSnap.forEach(d => { adminSecretsMap[d.id] = d.data().passwordPlain; });
-      }
-
-      const logsByUser = {};
-      allLogsSnap.forEach(d => {
-        const data = d.data();
-        if (!data.userId || !data.weekId) return;
-        if (!logsByUser[data.userId]) logsByUser[data.userId] = [];
-        logsByUser[data.userId].push({ docId: d.id, weekId: data.weekId, days: data.days || {} });
-      });
-
-      const batchTasks = [];
-      adminUsersList.forEach(u => {
-        const uLogs = logsByUser[u.id] || [];
-        let newlyArchived = 0;
-        let recent20Stars = 0;
-
-        uLogs.forEach(item => {
-          const s = Object.values(item.days).filter(day => day && day.completed).length;
-          if (item.weekId < oldestAllowedWeekId) {
-            newlyArchived += s;
-            batchTasks.push(deleteDoc(doc(db, "logs", item.docId)));
-          } else {
-            recent20Stars += s;
-          }
-        });
-
-        const updatedArchived = Number(u.archivedStars || 0) + newlyArchived;
-        const updatedTotal = updatedArchived + recent20Stars;
-
-        if (newlyArchived > 0 || u.totalStars !== updatedTotal || u.archivedStars !== updatedArchived) {
-          u.archivedStars = updatedArchived;
-          u.totalStars = updatedTotal;
-          batchTasks.push(updateDoc(doc(db, "users", u.id), {
-            archivedStars: updatedArchived,
-            totalStars: updatedTotal
-          }));
-        }
-      });
-
-      if (batchTasks.length > 0) {
-        await withRetry(() => Promise.all(batchTasks));
       }
     }
 
@@ -2214,11 +2222,13 @@
         ? adminFilterTeamId
         : (getAuthorizedTeamsForCurrentStaff()[0]?.id || null);
 
-      await loadScheduleForWeek(wId, targetTeamForSchedule);
+      const [, snap] = await withRetry(() => Promise.all([
+        loadScheduleForWeek(wId, targetTeamForSchedule),
+        getDocs(query(collection(db, "logs"), where("weekId", "==", wId)))
+      ]));
+
       populateExerciseSelectors();
 
-      const q = query(collection(db, "logs"), where("weekId", "==", wId));
-      const snap = await withRetry(() => getDocs(q));
       adminWeekLogsMap = {};
       snap.forEach(d => {
         const data = d.data();
@@ -2230,6 +2240,10 @@
 
     function renderAdminStudentsOverviewTable() {
       const sortMode = document.getElementById("adminSortSelect")?.value || "weekly_desc";
+      const searchKw = (document.getElementById("adminOverviewSearchInput")?.value || "").trim().toLowerCase();
+      const clearBtn = document.getElementById("btnClearOverviewSearch");
+      if (clearBtn) clearBtn.classList.toggle("hidden", !searchKw);
+
       const headingEl = document.getElementById("overviewTeamHeading");
       if (headingEl) {
         const filterTitle = adminFilterTeamId === "ALL"
@@ -2238,23 +2252,40 @@
         headingEl.innerText = `🏆 學員體能表現總覽 — 【${filterTitle}】`;
       }
 
-      // 嚴格只列出學員，並按當前總教練/助教的隊伍權限過濾
-      const visibleStudents = adminUsersList.filter(u => 
+      const teamScopedStudents = adminUsersList.filter(u => 
         u.role === "student" && canStaffAccessStudent(u, adminFilterTeamId)
       );
+
+      const visibleStudents = teamScopedStudents.filter(u => {
+        if (!searchKw) return true;
+        const cName = (u.chineseName || "").toLowerCase();
+        const uName = (u.username || "").toLowerCase();
+        const phone = (u.phone || "").toLowerCase();
+        const teamNames = getUserTeamIds(u).map(tid => getTeamNameById(tid)).join(" ").toLowerCase();
+        return cName.includes(searchKw) || uName.includes(searchKw) || phone.includes(searchKw) || teamNames.includes(searchKw);
+      });
+
+      const countBadge = document.getElementById("overviewStudentCountBadge");
+      if (countBadge) {
+        countBadge.innerText = searchKw
+          ? `搜尋結果：${visibleStudents.length} / ${teamScopedStudents.length} 人`
+          : `共 ${visibleStudents.length} 位學員`;
+      }
 
       const container = document.getElementById("allStudentsTable");
 
       if (visibleStudents.length === 0) {
-        container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">此隊伍目前尚無學員紀錄。</p>`;
+        container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">${
+          searchKw ? `🔍 找不到包含「${searchKw}」的所屬隊伍學員。` : `此隊伍目前尚無學員紀錄。`
+        }</p>`;
         return;
       }
 
       const enriched = visibleStudents.map(u => {
         const uDays = adminWeekLogsMap[u.id] || {};
         const weekStars = Object.values(uDays).filter(d => d && d.completed).length;
-        const totalStars = Number(u.totalStars || 0);
         const archivedStars = Number(u.archivedStars || 0);
+        const totalStars = Math.max(Number(u.totalStars || 0), archivedStars + weekStars);
         return { u, weekStars, totalStars, archivedStars };
       });
 
@@ -2272,10 +2303,7 @@
           `<span class="text-[11px] font-black bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-full">🚩 ${getTeamNameById(tid)}</span>`
         ).join("");
 
-        // 私隱保護：只有總教練看到學員電話，管理員（助教）只看到姓名與訓練數據
-        const contactInfoHtml = isHeadCoach()
-          ? `<span class="text-xs text-slate-500">(@${u.username} / 📞 ${u.phone})</span>`
-          : `<span class="text-xs text-slate-400">(@${u.username})</span>`;
+        const contactInfoHtml = `<span class="text-xs text-slate-500">(@${u.username} / 📞 ${u.phone || '未填'})</span>`;
 
         return `
           <div class="border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 transition">
@@ -2301,28 +2329,22 @@
       }).join("");
     }
 
-    // ==================== STREAMING_CHUNK:Implementing coach student inspector, team schedule publisher, and team CRUD... ====================
     async function openStudentInspector(uid) {
       requireStaff();
-      const targetStu = adminUsersList.find(u => u.id === uid);
-      if (!targetStu || !canStaffAccessStudent(targetStu, "ALL")) {
-        return showToast("⚠️ 你沒有權限查看其他隊伍的學員資料！", true);
+      inspectedStudent = adminUsersList.find(u => u.id === uid);
+      if (!inspectedStudent) return;
+
+      if (!canStaffAccessStudent(inspectedStudent, "ALL")) {
+        return showToast("⚠️ 你沒有該隊伍的檢視權限！", true);
       }
-      inspectedStudent = targetStu;
 
       showLoading(`正在載入 ${inspectedStudent.chineseName} 的近 20 週紀錄...`);
       try {
-        const stuTeams = getUserTeamIds(inspectedStudent);
-        await loadScheduleForWeek(selectedWeekId, stuTeams[0] || null);
-        populateExerciseSelectors();
-
         const pruned = await fetchAndPruneUserLogs20Weeks(inspectedStudent);
         inspectedStudentLogs = pruned.logsMap;
 
-        document.getElementById("inspectorTitle").innerText = `🏃🏻‍♂️ ${inspectedStudent.chineseName}（@${inspectedStudent.username}）`;
-        document.getElementById("inspectorStudentTeams").innerHTML = stuTeams.map(tid => 
-          `<span class="text-xs font-black bg-blue-100 text-blue-900 px-2.5 py-0.5 rounded-full">🚩 ${getTeamNameById(tid)}</span>`
-        ).join("");
+        const stuTeamNames = getUserTeamIds(inspectedStudent).map(tid => getTeamNameById(tid)).join("、");
+        document.getElementById("inspectorTitle").innerText = `🏃🏻‍♂️ ${inspectedStudent.chineseName}（所屬隊伍：${stuTeamNames}）`;
         document.getElementById("coachEditWeekLabel").innerText = `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
         document.getElementById("coachStudentInspector").classList.remove("hidden");
 
@@ -2400,7 +2422,7 @@
       requireStaff();
       if (!inspectedStudent) return;
 
-      const records = {};
+      const records = { ...(inspectedStudentLogs[selectedWeekId]?.[coachSelectedDayIdx]?.records || {}) };
       currentSchedule.forEach(ex => {
         const val = Math.max(0, parseInt(document.getElementById(`coach_ex_input_${ex.id}`)?.value) || 0);
         records[ex.id] = val;
@@ -2475,7 +2497,7 @@
       const dayHeadersWithDate = [0, 1, 2, 3, 4, 5, 6].map(dIdx => `${dayNames[dIdx]}(${getDayDateInfo(selectedWeekId, dIdx).ddmm})`);
       const exHeaders = currentSchedule.map(ex => `${ex.name}本週總計(${ex.unit})`);
       const headers = [
-        "週次範圍(日/月)", "所屬隊伍", "中文姓名", "帳號名稱", "本週得星數", "歷史累積總星數", "20週前封存星數", "達成每週獎章",
+        "週次範圍(日/月)", "學員姓名", "所屬隊伍", "本週得星數", "歷史累積總星數", "20週前封存星數", "達成每週獎章",
         ...dayHeadersWithDate,
         ...exHeaders
       ];
@@ -2486,7 +2508,7 @@
         const totalStars = Number(u.totalStars || 0);
         const archivedStars = Number(u.archivedStars || 0);
         const badge = getBadgeInfo(stars).shortBadge;
-        const teamNames = getUserTeamIds(u).map(tid => getTeamNameById(tid)).join(" / ");
+        const teamNamesStr = getUserTeamIds(u).map(tid => getTeamNameById(tid)).join(" / ");
 
         const dayCells = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
           const dObj = uDays[dIdx];
@@ -2507,7 +2529,7 @@
         });
 
         return [
-          formatWeekRangeHK(selectedWeekId), teamNames, u.chineseName, u.username, stars, totalStars, archivedStars, badge,
+          formatWeekRangeHK(selectedWeekId), u.chineseName, teamNamesStr, stars, totalStars, archivedStars, badge,
           ...dayCells,
           ...exTotals
         ].map(cell => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",");
@@ -2518,18 +2540,11 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `特奧足球隊體能紀錄_${selectedWeekId}週.csv`;
+      a.download = `足球隊體能紀錄_${selectedWeekId}週.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    }
-
-    // ==================== 課表編輯器（支援單一隊伍發佈 vs 全隊伍同步發佈） ====================
-    async function loadScheduleForScheduleEditor() {
-      scheduleEditTeamId = document.getElementById("scheduleTeamSelect")?.value || getAuthorizedTeamsForCurrentStaff()[0]?.id;
-      await loadScheduleForWeek(selectedWeekId, scheduleEditTeamId);
-      renderScheduleEditor();
     }
 
     function renderScheduleEditor() {
@@ -2551,8 +2566,12 @@
       requireStaff();
       if (syncAllTeams) requireHeadCoach();
 
-      const targetTeamId = document.getElementById("scheduleTeamSelect")?.value || scheduleEditTeamId;
-      showLoading(syncAllTeams ? "正在將課表同步發佈至所有隊伍..." : `正在儲存【${getTeamNameById(targetTeamId)}】的專屬課表...`);
+      const targetTeamId = document.getElementById("scheduleTargetTeamSelect")?.value || scheduleEditTeamId;
+      if (!syncAllTeams && !targetTeamId) {
+        return showToast("⚠️ 請先選擇目標隊伍！", true);
+      }
+
+      showLoading(syncAllTeams ? "正在將課表同步發佈至所有隊伍..." : `正在儲存【${getTeamNameById(targetTeamId)}】課表...`);
       try {
         currentSchedule = currentSchedule.map((ex, i) => {
           const updated = {
@@ -2570,20 +2589,19 @@
         ];
 
         if (syncAllTeams) {
-          // 同步寫入全局預設及所有隊伍的當週與預設課表
           tasks.push(setDoc(doc(db, "schedules", selectedWeekId), { exercises: currentSchedule }));
           tasks.push(setDoc(doc(db, "schedules", "default"), { exercises: currentSchedule }));
           teamsList.forEach(t => {
-            tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${t.id}`), { exercises: currentSchedule, teamId: t.id }));
-            tasks.push(setDoc(doc(db, "schedules", `default_${t.id}`), { exercises: currentSchedule, teamId: t.id }));
+            tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${t.id}`), { exercises: currentSchedule }));
+            tasks.push(setDoc(doc(db, "schedules", `default_${t.id}`), { exercises: currentSchedule }));
           });
         } else {
-          // 只應用到當前所選隊伍
-          tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${targetTeamId}`), { exercises: currentSchedule, teamId: targetTeamId }));
-          tasks.push(setDoc(doc(db, "schedules", `default_${targetTeamId}`), { exercises: currentSchedule, teamId: targetTeamId }));
+          tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${targetTeamId}`), { exercises: currentSchedule }));
+          tasks.push(setDoc(doc(db, "schedules", `default_${targetTeamId}`), { exercises: currentSchedule }));
         }
 
         await withRetry(() => Promise.all(tasks));
+        saveSettingsToLocalCache();
 
         populateExerciseSelectors();
         renderScheduleEditor();
@@ -2596,7 +2614,6 @@
       }
     }
 
-    // ==================== STREAMING_CHUNK:Implementing Head Coach team management (create/rename/delete) and user permission assignment... ====================
     function renderTeamsManager() {
       requireHeadCoach();
       const container = document.getElementById("teamsManagerList");
@@ -2604,11 +2621,11 @@
         const stuCount = adminUsersList.filter(u => u.role === "student" && getUserTeamIds(u).includes(t.id)).length;
         const admCount = adminUsersList.filter(u => u.role === "admin" && getUserTeamIds(u).includes(t.id)).length;
         return `
-          <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
-            <div class="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <span class="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-1 rounded font-bold self-start sm:self-center shrink-0">🚩 隊伍 ${idx + 1}</span>
-              <input type="text" id="editTeamName_${idx}" value="${t.name}" class="flex-1 p-2.5 border-2 border-slate-300 focus:border-emerald-500 rounded-xl bg-white font-black text-slate-800">
-              <span class="text-xs font-bold text-slate-500 shrink-0">（學員 ${stuCount} 人 ／ 助教 ${admCount} 人）</span>
+          <div class="bg-slate-50 p-3.5 rounded-2xl border-2 border-slate-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+            <div class="flex items-center gap-2 flex-1">
+              <span class="text-lg">🚩</span>
+              <input type="text" id="editTeamName_${idx}" value="${t.name}" class="flex-1 p-2.5 border-2 border-slate-300 focus:border-emerald-500 rounded-xl bg-white font-black text-slate-800 text-sm sm:text-base">
+              <span class="text-xs font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full shrink-0">學員 ${stuCount} 人 / 助教 ${admCount} 人</span>
             </div>
             <div class="flex gap-2 shrink-0">
               <button data-saveteam="${idx}" class="btn-save-team flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow-sm">💾 儲存隊名</button>
@@ -2624,13 +2641,14 @@
       const nameInput = document.getElementById("newTeamNameInput");
       const newName = nameInput.value.trim();
       if (!newName) return showToast("⚠️ 請輸入新隊伍名稱！", true);
-      if (teamsList.some(t => t.name === newName)) return showToast("⚠️ 此隊伍名稱已經存在！", true);
+      if (teamsList.some(t => t.name === newName)) return showToast("⚠️ 此隊伍名稱已存在！", true);
 
       showLoading("正在新增隊伍...");
       try {
         const newTeam = { id: "team_" + Date.now(), name: newName };
         teamsList.push(newTeam);
         await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+        saveSettingsToLocalCache();
         nameInput.value = "";
         populateAdminTeamSelectors();
         renderRegistrationTeamCheckboxes();
@@ -2644,7 +2662,6 @@
     }
 
     function renderAdminAchievements() {
-      if (!isHeadCoach()) return;
       const container = document.getElementById("adminAchievementsList");
       container.innerHTML = achievementsList.map((ach, idx) => `
         <div class="border-2 border-slate-200 rounded-2xl p-3.5 bg-slate-50 space-y-2">
@@ -2668,20 +2685,46 @@
       `).join("");
     }
 
-    // 總教練專屬：全員帳號密碼與隊伍指派管理
     function renderUserAdminList() {
       requireHeadCoach();
       const roleFilter = document.getElementById("userAdminRoleFilter")?.value || "ALL";
-      const filteredUsers = adminUsersList
-        .filter(u => roleFilter === "ALL" ? true : u.role === roleFilter)
+      const searchKw = (document.getElementById("userAdminSearchInput")?.value || "").trim().toLowerCase();
+      const clearBtn = document.getElementById("btnClearUserAdminSearch");
+      if (clearBtn) clearBtn.classList.toggle("hidden", !searchKw);
+
+      const roleScopedUsers = adminUsersList.filter(u => roleFilter === "ALL" ? true : u.role === roleFilter);
+
+      const filteredUsers = roleScopedUsers
+        .filter(u => {
+          if (!searchKw) return true;
+          const cName = (u.chineseName || "").toLowerCase();
+          const uName = (u.username || "").toLowerCase();
+          const phone = (u.phone || "").toLowerCase();
+          const rLabel = getRoleLabel(u.role).toLowerCase();
+          const teamNames = getUserTeamIds(u).map(tid => getTeamNameById(tid)).join(" ").toLowerCase();
+          return cName.includes(searchKw) || uName.includes(searchKw) || phone.includes(searchKw) || rLabel.includes(searchKw) || teamNames.includes(searchKw);
+        })
         .sort((a, b) => (b.needHelp ? 1 : 0) - (a.needHelp ? 1 : 0));
 
+      const countBadge = document.getElementById("userAdminCountBadge");
+      if (countBadge) {
+        countBadge.innerText = searchKw
+          ? `搜尋結果：${filteredUsers.length} / ${roleScopedUsers.length} 人`
+          : `共 ${filteredUsers.length} 個帳號`;
+      }
+
       const container = document.getElementById("userAdminList");
+
+      if (filteredUsers.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">🔍 找不到符合條件的帳號。</p>`;
+        return;
+      }
 
       container.innerHTML = filteredUsers.map(u => {
         const plainPwd = adminSecretsMap[u.id] || u.password || "（可按右側重設）";
         const totalStars = Number(u.totalStars || 0);
         const uTeams = getUserTeamIds(u);
+        const isSelf = currentUser && u.id === currentUser.id;
 
         const roleBadgeClass = u.role === "coach"
           ? "bg-amber-200 text-amber-950 border border-amber-400"
@@ -2699,6 +2742,7 @@
                 <span class="text-xs px-2.5 py-0.5 rounded-full font-black ${roleBadgeClass}">
                   ${getRoleLabel(u.role)}
                 </span>
+                ${isSelf ? `<span class="text-[11px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full">目前登入中</span>` : ''}
                 ${u.role === 'student' ? `<span class="text-xs font-black bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">🏆 累計 ${totalStars} 星</span>` : ''}
                 ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ 忘記密碼求助中！</span>` : ''}
               </div>
@@ -2712,65 +2756,98 @@
             <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               ${u.role !== 'coach' ? `
                 <button data-assignteamuid="${u.id}" class="btn-admin-assignteams flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
-                  🚩 分配隊伍權限
+                  🚩 分配隊伍
                 </button>
               ` : ''}
               <button data-resetuid="${u.id}" data-resetname="${u.chineseName}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
-                🔑 幫佢改密碼
+                🔑 改密碼
               </button>
               <select data-changeroleuid="${u.id}" class="sel-admin-changerole bg-purple-50 border-2 border-purple-300 text-purple-950 text-xs font-black px-2.5 py-2 rounded-xl">
                 <option value="student" ${u.role === 'student' ? 'selected' : ''}>設為：⚽ 學員</option>
                 <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>設為：🛡️ 管理員(助教)</option>
                 <option value="coach" ${u.role === 'coach' ? 'selected' : ''}>設為：👑 總教練</option>
               </select>
+              <button data-deleteuid="${u.id}" data-deletename="${u.chineseName}" class="btn-admin-deleteuser bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 text-xs font-black px-3 py-2 rounded-xl transition shrink-0" title="永久刪除此帳號及所有紀錄">
+                🗑️ 刪除帳號
+              </button>
             </div>
           </div>
         `;
       }).join("");
     }
 
-    // ==================== STREAMING_CHUNK:Binding all event listeners and booting persistent session... ====================
+    async function handleDeleteUserAccount(uid, name) {
+      requireHeadCoach();
+      if (currentUser && uid === currentUser.id) {
+        return showToast("⚠️ 安全保護：你不能刪除自己目前正在登入使用的總教練帳號！", true);
+      }
+
+      const targetUser = adminUsersList.find(u => u.id === uid);
+      const roleStr = targetUser ? getRoleLabel(targetUser.role) : "帳號";
+
+      const confirmed = await openCustomModal({
+        icon: "⚠️",
+        title: `確認永久刪除【${name}】？`,
+        message: `你即將刪除 ${roleStr}「${name}」（@${targetUser?.username || ''}）。\n\n一旦確認，系統會將該帳號的：\n1. 個人帳號資料 (users)\n2. 密碼憑證資料 (user_secrets)\n3. 所有歷史體能打卡紀錄與星星 (logs)\n全部從資料庫永久移除且無法復原！確定要執行嗎？`,
+        showCancel: true,
+        confirmText: "🗑️ 確認永久刪除",
+        cancelText: "取消"
+      });
+      if (!confirmed) return;
+
+      showLoading(`正在從資料庫徹底移除【${name}】的所有資料...`);
+      try {
+        const logsSnap = await withRetry(() => getDocs(query(collection(db, "logs"), where("userId", "==", uid))));
+        const deletePromises = [];
+        logsSnap.forEach(d => {
+          deletePromises.push(deleteDoc(doc(db, "logs", d.id)));
+        });
+
+        deletePromises.push(deleteDoc(doc(db, "users", uid)));
+        deletePromises.push(deleteDoc(doc(db, "user_secrets", uid)));
+
+        await withRetry(() => Promise.all(deletePromises));
+
+        adminUsersList = adminUsersList.filter(u => u.id !== uid);
+        delete adminSecretsMap[uid];
+        delete adminWeekLogsMap[uid];
+
+        if (inspectedStudent && inspectedStudent.id === uid) {
+          document.getElementById("coachStudentInspector").classList.add("hidden");
+          inspectedStudent = null;
+        }
+
+        renderUserAdminList();
+        renderTeamsManager();
+        renderAdminStudentsOverviewTable();
+        showToast(`🗑️ 已徹底刪除【${name}】的帳號及所有資料庫紀錄！`);
+      } catch (err) {
+        console.error("刪除帳號失敗:", err);
+        showToast("⚠️ 刪除時網絡不穩，請再試一次！", true);
+      } finally {
+        hideLoading();
+      }
+    }
+
     document.getElementById("toggleLoginPwd").addEventListener("change", (e) => {
       document.getElementById("loginPassword").type = e.target.checked ? "text" : "password";
     });
+    document.getElementById("regCoachCode").addEventListener("input", updateRegistrationCodeUI);
     document.getElementById("btnLogin").addEventListener("click", handleLogin);
     document.getElementById("loginPassword").addEventListener("keydown", (e) => {
       if (e.key === "Enter") handleLogin();
     });
     document.getElementById("btnRegister").addEventListener("click", handleRegister);
     document.getElementById("btnForgotPwd").addEventListener("click", handleForgotPassword);
-    document.getElementById("btnGoRegister").addEventListener("click", () => {
-      renderRegistrationTeamCheckboxes();
+    document.getElementById("btnGoRegister").addEventListener("click", async () => {
       document.getElementById("loginCard").classList.add("hidden");
       document.getElementById("registerCard").classList.remove("hidden");
+      await loadGlobalSettings();
+      updateRegistrationCodeUI();
     });
     document.getElementById("btnBackLogin").addEventListener("click", () => {
       document.getElementById("registerCard").classList.add("hidden");
       document.getElementById("loginCard").classList.remove("hidden");
-    });
-
-    // 當註冊頁輸入授權碼時，即時判斷是「總教練 (COACH888)」、「管理員/助教 (ADMIN888)」還是「學員」，若為總教練自動隱藏隊伍選擇
-    document.getElementById("regAuthCode").addEventListener("input", (e) => {
-      const code = e.target.value.trim();
-      const detectedRole = detectRoleFromAuthCode(code);
-      const badgeEl = document.getElementById("regRoleDetectBadge");
-      const teamWrap = document.getElementById("regTeamSelectionWrap");
-
-      if (detectedRole === "coach") {
-        badgeEl.className = "text-xs font-black text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg mt-1 inline-block";
-        badgeEl.innerText = "👑 已識別為【總教練】授權碼！你擁有全部隊伍最高權限，無需填寫所屬隊伍。";
-        teamWrap.classList.add("hidden");
-      } else if (detectedRole === "admin") {
-        badgeEl.className = "text-xs font-black text-purple-700 bg-purple-100 px-2.5 py-1 rounded-lg mt-1 inline-block";
-        badgeEl.innerText = "🛡️ 已識別為【管理員／助教】授權碼！請在下方勾選你負責協助的隊伍（可多選）：";
-        teamWrap.classList.remove("hidden");
-      } else {
-        badgeEl.className = "text-xs font-black text-emerald-700 mt-1";
-        badgeEl.innerText = code
-          ? "⚠️ 授權碼未匹配（如你是學員請留空此欄，並在下方勾選所屬隊伍）"
-          : "⚽ 目前註冊身份：學員（請在下方勾選所屬隊伍，可多選）";
-        teamWrap.classList.remove("hidden");
-      }
     });
 
     document.getElementById("btnManualSync").addEventListener("click", async () => {
@@ -2785,8 +2862,7 @@
       location.reload();
     });
 
-    // 學員切換不同所屬隊伍的課表
-    document.getElementById("studentTeamSelect").addEventListener("change", async (e) => {
+    document.getElementById("stuActiveTeamSelect").addEventListener("change", async (e) => {
       studentActiveTeamId = e.target.value;
       showLoading(`正在切換至【${getTeamNameById(studentActiveTeamId)}】課表...`);
       try {
@@ -2885,13 +2961,18 @@
       btn.addEventListener("click", () => switchStudentTab(btn.getAttribute("data-stutab")));
     });
 
-    // ==================== 總教練／管理員(助教) 互動事件 ====================
+    // 總教練／管理員(助教) 頂部隊伍過濾器切換
+    document.getElementById("adminTeamFilterSelect").addEventListener("change", async (e) => {
+      adminFilterTeamId = e.target.value;
+      await loadAdminWeekOverview(selectedWeekId);
+    });
+
     document.querySelectorAll(".adm-nav-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         requireStaff();
         const tab = btn.getAttribute("data-admtab");
         if ((tab === "teams" || tab === "achievements" || tab === "users") && !isHeadCoach()) {
-          return showToast("⚠️ 此頁面只限【總教練】存取！", true);
+          return showToast("⚠️ 此分頁只限總教練存取！", true);
         }
         ['overview', 'schedule', 'teams', 'achievements', 'users'].forEach(t => {
           const el = document.getElementById(`admin${t.charAt(0).toUpperCase() + t.slice(1)}Tab`);
@@ -2907,22 +2988,10 @@
       });
     });
 
-    // 頂部隊伍過濾器切換
-    document.getElementById("adminTeamFilterSelect").addEventListener("change", async (e) => {
-      adminFilterTeamId = e.target.value;
-      if (adminFilterTeamId !== "ALL" && adminFilterTeamId !== "NONE") {
-        const schSel = document.getElementById("scheduleTeamSelect");
-        if (schSel) schSel.value = adminFilterTeamId;
-        await loadScheduleForScheduleEditor();
-      }
-      renderAdminStudentsOverviewTable();
-    });
-
     document.getElementById("adminWeekSelect").addEventListener("change", async (e) => {
       showLoading("正在切換週次資料...");
       try {
         await loadAdminWeekOverview(e.target.value);
-        await loadScheduleForScheduleEditor();
         if (inspectedStudent) {
           document.getElementById("coachEditWeekLabel").innerText = `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
           renderCoachStudentEditor();
@@ -2934,6 +3003,12 @@
 
     document.getElementById("adminSortSelect").addEventListener("change", renderAdminStudentsOverviewTable);
     document.getElementById("btnExportCSV").addEventListener("click", exportWeeklyCSV);
+
+    document.getElementById("adminOverviewSearchInput").addEventListener("input", renderAdminStudentsOverviewTable);
+    document.getElementById("btnClearOverviewSearch").addEventListener("click", () => {
+      document.getElementById("adminOverviewSearchInput").value = "";
+      renderAdminStudentsOverviewTable();
+    });
 
     document.getElementById("allStudentsTable").addEventListener("click", (e) => {
       const btn = e.target.closest(".btn-inspect-student");
@@ -2959,11 +3034,13 @@
     document.getElementById("btnCoachSaveStudentDay").addEventListener("click", () => saveCoachStudentDay(true));
     document.getElementById("btnCoachClearStudentDay").addEventListener("click", () => saveCoachStudentDay(false));
 
-    // 課表編輯事件
-    document.getElementById("scheduleTeamSelect").addEventListener("change", async () => {
-      showLoading("正在載入該隊伍課表...");
+    // 課表隊伍切換與編輯事件
+    document.getElementById("scheduleTargetTeamSelect").addEventListener("change", async (e) => {
+      scheduleEditTeamId = e.target.value;
+      showLoading(`正在載入【${getTeamNameById(scheduleEditTeamId)}】的課表...`);
       try {
-        await loadScheduleForScheduleEditor();
+        await loadScheduleForWeek(selectedWeekId, scheduleEditTeamId);
+        renderScheduleEditor();
       } finally {
         hideLoading();
       }
@@ -2992,16 +3069,14 @@
       renderScheduleEditor();
     });
 
-    document.getElementById("btnSaveScheduleSingleTeam").addEventListener("click", () => saveWeeklySchedule(false));
+    document.getElementById("btnSaveScheduleCurrentTeam").addEventListener("click", () => saveWeeklySchedule(false));
     document.getElementById("btnSaveScheduleAllTeams").addEventListener("click", () => saveWeeklySchedule(true));
 
-    // 總教練：梯隊新增、改名與刪除事件
+    // 總教練：梯隊管理事件
     document.getElementById("btnAddTeam").addEventListener("click", handleAddTeam);
-
     document.getElementById("teamsManagerList").addEventListener("click", async (e) => {
       const saveBtn = e.target.closest(".btn-save-team");
       const delBtn = e.target.closest(".btn-del-team");
-
       if (saveBtn) {
         requireHeadCoach();
         const idx = parseInt(saveBtn.getAttribute("data-saveteam"));
@@ -3011,6 +3086,7 @@
         showLoading("正在更新隊伍名稱...");
         try {
           await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+          saveSettingsToLocalCache();
           populateAdminTeamSelectors();
           renderRegistrationTeamCheckboxes();
           renderTeamsManager();
@@ -3040,6 +3116,7 @@
         try {
           teamsList.splice(idx, 1);
           await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+          saveSettingsToLocalCache();
           populateAdminTeamSelectors();
           renderRegistrationTeamCheckboxes();
           renderTeamsManager();
@@ -3063,6 +3140,7 @@
       if (!title || !desc) return showToast("請填寫成就名稱及鼓勵字句！", true);
       achievementsList.push({ id: "ach_" + Date.now(), icon, title, type, target, desc });
       await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+      saveSettingsToLocalCache();
       document.getElementById("newAchTitle").value = "";
       document.getElementById("newAchDesc").value = "";
       renderAdminAchievements();
@@ -3081,6 +3159,7 @@
         achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
         achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
         await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+        saveSettingsToLocalCache();
         showToast("✅ 已更新該項成就！");
         renderAdminAchievements();
       } else if (delBtn) {
@@ -3096,19 +3175,31 @@
         if (!confirmed) return;
         achievementsList.splice(idx, 1);
         await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+        saveSettingsToLocalCache();
         renderAdminAchievements();
         showToast("🗑️ 已刪除該成就");
       }
     });
 
-    // 總教練：用戶管理（指派多隊伍權限、重設密碼、更改職級）
+    // 總教練：用戶管理（搜尋、指派多隊伍權限、重設密碼、更改職級、永久刪除帳號）
     document.getElementById("userAdminRoleFilter").addEventListener("change", renderUserAdminList);
+    document.getElementById("userAdminSearchInput").addEventListener("input", renderUserAdminList);
+    document.getElementById("btnClearUserAdminSearch").addEventListener("click", () => {
+      document.getElementById("userAdminSearchInput").value = "";
+      renderUserAdminList();
+    });
 
     document.getElementById("userAdminList").addEventListener("click", async (e) => {
       const resetBtn = e.target.closest(".btn-admin-resetpwd");
       const assignBtn = e.target.closest(".btn-admin-assignteams");
+      const deleteBtn = e.target.closest(".btn-admin-deleteuser");
 
-      if (resetBtn) {
+      if (deleteBtn) {
+        requireHeadCoach();
+        const uid = deleteBtn.getAttribute("data-deleteuid");
+        const name = deleteBtn.getAttribute("data-deletename");
+        await handleDeleteUserAccount(uid, name);
+      } else if (resetBtn) {
         requireHeadCoach();
         const uid = resetBtn.getAttribute("data-resetuid");
         const name = resetBtn.getAttribute("data-resetname");
@@ -3129,8 +3220,10 @@
             updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
             setDoc(doc(db, "user_secrets", uid), { passwordPlain: cleanPwd })
           ]));
+          adminSecretsMap[uid] = cleanPwd;
+          const targetU = adminUsersList.find(item => item.id === uid);
+          if (targetU) targetU.needHelp = false;
           showToast(`✅ 已將【${name}】的密碼更新為：${cleanPwd}`);
-          await loadAdminUsersAndSecrets();
           renderUserAdminList();
         } finally {
           hideLoading();
@@ -3141,27 +3234,27 @@
         const targetUser = adminUsersList.find(u => u.id === uid);
         if (!targetUser) return;
 
-        const curTeams = getUserTeamIds(targetUser);
+        const currentTeamIds = getUserTeamIds(targetUser);
         const checkboxOptions = teamsList.map(t => ({
           id: t.id,
-          name: t.name,
-          checked: curTeams.includes(t.id)
+          label: `🚩 ${t.name}`,
+          checked: currentTeamIds.includes(t.id)
         }));
 
         const selectedIds = await openCustomModal({
           icon: "🚩",
-          title: `指派【${targetUser.chineseName}】的隊伍權限`,
+          title: `分配【${targetUser.chineseName}】的隊伍`,
           message: targetUser.role === "admin"
-            ? "請勾選此管理員（助教）獲授權管理的隊伍（可多選）："
+            ? "請勾選此管理員（助教）獲授權檢視與管理的隊伍（可多選）："
             : "請勾選此學員所屬的隊伍（可多選）：",
           checkboxOptions,
           showCancel: true,
-          confirmText: "💾 儲存隊伍指派"
+          confirmText: "💾 儲存隊伍權限"
         });
 
         if (!selectedIds) return;
         if (selectedIds.length === 0) {
-          return showToast("⚠️ 請至少勾選一支隊伍！", true);
+          return showToast("⚠️ 請至少為其勾選一支隊伍！", true);
         }
 
         showLoading("正在更新所屬隊伍權限...");
@@ -3171,7 +3264,7 @@
           renderUserAdminList();
           renderTeamsManager();
           renderAdminStudentsOverviewTable();
-          showToast(`✅ 已更新【${targetUser.chineseName}】的隊伍權限！`);
+          showToast(`✅ 已更新【${targetUser.chineseName}】的隊伍設定！`);
         } finally {
           hideLoading();
         }
@@ -3179,19 +3272,19 @@
     });
 
     document.getElementById("userAdminList").addEventListener("change", async (e) => {
-      const sel = e.target.closest(".sel-admin-changerole");
-      if (!sel) return;
+      const selectEl = e.target.closest(".sel-admin-changerole");
+      if (!selectEl) return;
       requireHeadCoach();
-      const uid = sel.getAttribute("data-changeroleuid");
-      const newRole = sel.value;
+      const uid = selectEl.getAttribute("data-changeroleuid");
+      const newRole = selectEl.value;
       const targetUser = adminUsersList.find(u => u.id === uid);
       if (!targetUser) return;
 
-      showLoading("正在更新職級權限...");
+      showLoading("正在更新帳號職級權限...");
       try {
         await withRetry(() => updateDoc(doc(db, "users", uid), { role: newRole }));
         targetUser.role = newRole;
-        showToast(`✅ 已將【${targetUser.chineseName}】職級更新為：${getRoleLabel(newRole)}`);
+        showToast(`✅ 已將【${targetUser.chineseName}】設為：${getRoleLabel(newRole)}`);
         renderUserAdminList();
         renderTeamsManager();
         renderAdminStudentsOverviewTable();
@@ -3200,7 +3293,7 @@
       }
     });
 
-    // 啟動時自動載入隊伍清單並檢查恢復登入狀態
+    // 啟動時立即渲染預設隊伍並檢查持久登入狀態
     restoreSessionOnBoot();
   </script>
 </body>
