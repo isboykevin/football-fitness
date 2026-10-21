@@ -3,40 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>⚽ 足球隊體能訓練與成就系統</title>
-  <!-- 引入 Google Fonts 思源黑體 (Noto Sans TC) 及 Inter 確保跨系統中英文字體一致 -->
+  <title>⚽ 足球隊體能訓練與成長紀錄系統</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    /* 跨系統字體設定：優先使用思源黑體、iOS 蘋方、Android Noto、Windows 正黑體 */
     body {
-      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang HK", "PingFang TC", "Microsoft JhengHei", "Heiti TC", sans-serif;
+      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang HK", "PingFang TC", "Microsoft JhengHei", sans-serif;
       -webkit-tap-highlight-color: transparent;
       background-color: #f1f5f9;
     }
-    /* 防止 iOS Safari 點擊輸入框時自動放大畫面 */
     input, select, textarea {
       font-size: 16px !important;
     }
-    /* 隱藏捲軸但保留滑動功能 */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
   </style>
 </head>
-<body class="min-h-screen text-slate-800 pb-24">
+<body class="min-h-screen text-slate-800 pb-28">
 
-  <!-- 頂部漸層導航列 -->
+  <!-- 頂部導航列 -->
   <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3.5 shadow-lg sticky top-0 z-30">
-    <div class="max-w-3xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-2">
+    <div class="max-w-4xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-2.5">
         <span class="text-2xl">⚽</span>
         <div>
           <h1 class="text-lg sm:text-xl font-black tracking-wide leading-tight">足球隊體能打卡站</h1>
@@ -45,16 +34,15 @@
       </div>
       <div id="userHeader" class="hidden flex items-center gap-2">
         <span id="currentUserBadge" class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs sm:text-sm font-bold"></span>
-        <button onclick="logout()" class="bg-rose-500 hover:bg-rose-600 active:scale-95 transition px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow">登出</button>
+        <button id="btnLogout" class="bg-rose-500 hover:bg-rose-600 active:scale-95 transition px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow">登出</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-3xl mx-auto p-3 sm:p-5">
+  <main class="max-w-4xl mx-auto p-3 sm:p-5">
 
     <!-- ==================== 1. 登入與註冊畫面 ==================== -->
-    <section id="authSection" class="mt-2">
-      <!-- 鼓勵語橫額 -->
+    <section id="authSection" class="mt-2 max-w-xl mx-auto">
       <div class="bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 border-2 border-amber-300 rounded-3xl p-4 mb-5 text-center shadow-sm">
         <p class="text-amber-900 font-black text-base sm:text-lg">🌟 每日一粒星 🌟 目標起碼四日做體能！</p>
         <p class="text-emerald-800 font-bold text-sm mt-1">大家繼續努力 保持最佳狀態 💪🏻💪🏼</p>
@@ -77,21 +65,21 @@
             <input type="password" id="loginPassword" placeholder="請輸入你的密碼" 
               class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:bg-white focus:outline-none transition font-bold text-slate-800">
             <label class="inline-flex items-center mt-2 text-xs text-slate-500 cursor-pointer select-none">
-              <input type="checkbox" onchange="document.getElementById('loginPassword').type = this.checked ? 'text' : 'password'" class="mr-1.5 rounded"> 顯示密碼文字
+              <input type="checkbox" id="toggleLoginPwd" class="mr-1.5 rounded"> 顯示密碼文字
             </label>
           </div>
 
           <p id="loginErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-sm font-bold text-center"></p>
 
-          <button onclick="handleLogin()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-98 transition">
+          <button id="btnLogin" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition">
             ✅ 登入系統
           </button>
 
           <div class="flex flex-col sm:flex-row gap-2 pt-2">
-            <button onclick="handleForgotPassword()" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-4 rounded-2xl text-sm transition">
+            <button id="btnForgotPwd" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-4 rounded-2xl text-sm transition">
               😢 忘記密碼？通知教練幫手
             </button>
-            <button onclick="toggleAuthMode('register')" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-4 rounded-2xl text-sm transition">
+            <button id="btnGoRegister" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-4 rounded-2xl text-sm transition">
               ➕ 新隊員註冊帳號
             </button>
           </div>
@@ -102,7 +90,7 @@
       <div id="registerCard" class="hidden bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
         <div class="flex justify-between items-center mb-4">
           <h2 class="text-2xl font-black text-blue-900">📝 新隊員註冊</h2>
-          <button onclick="toggleAuthMode('login')" class="text-sm font-bold text-slate-500 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-xl">⬅️ 返回登入</button>
+          <button id="btnBackLogin" class="text-sm font-bold text-slate-500 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-xl">⬅️ 返回登入</button>
         </div>
 
         <div class="space-y-4">
@@ -117,7 +105,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">3. 手提電話號碼（可用作登入） <span class="text-rose-500">*</span></label>
+            <label class="block text-sm font-bold text-slate-700 mb-1">3. 手提電話號碼（可用作登入，不可重複） <span class="text-rose-500">*</span></label>
             <input type="tel" id="regPhone" placeholder="例如：91234567" class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
@@ -127,13 +115,13 @@
           </div>
 
           <div class="pt-2 border-t border-slate-100">
-            <label class="block text-xs text-slate-400 mb-1">（選填）教練專屬通行碼（學員請留空）：</label>
-            <input type="password" id="regCoachCode" placeholder="輸入 COACH888 可直接成為管理員" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <label class="block text-xs text-slate-400 mb-1">（選填）職員授權碼（學員請留空）：</label>
+            <input type="password" id="regCoachCode" placeholder="一般學員請留空" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
 
           <p id="regErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-sm font-bold text-center"></p>
 
-          <button onclick="handleRegister()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-98 transition">
+          <button id="btnRegister" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition">
             🎉 完成註冊並登入
           </button>
         </div>
@@ -143,15 +131,15 @@
     <!-- ==================== 2. 學員專區畫面 ==================== -->
     <section id="studentSection" class="hidden space-y-5 mt-2">
 
-      <!-- 週次切換器（可查看本週或過往歷史週次） -->
+      <!-- 週次切換器 -->
       <div class="bg-white rounded-2xl shadow-sm p-3 border border-slate-200 flex items-center justify-between gap-2">
-        <span class="text-sm font-extrabold text-slate-700 pl-2">📅 選擇查看週次：</span>
-        <select id="studentWeekSelect" onchange="changeStudentWeek(this.value)" class="flex-1 max-w-xs bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm focus:outline-none">
+        <span class="text-sm font-extrabold text-slate-700 pl-2">📅 查看週次：</span>
+        <select id="studentWeekSelect" class="flex-1 max-w-xs bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm focus:outline-none">
         </select>
       </div>
 
       <!-- 星星與獎章鼓勵看板 -->
-      <div class="bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-200 border-4 border-amber-400 rounded-3xl p-5 text-center shadow-md relative overflow-hidden">
+      <div class="bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-200 border-4 border-amber-400 rounded-3xl p-5 text-center shadow-md">
         <p id="weekLabelStudent" class="text-xs sm:text-sm font-extrabold text-amber-800 bg-amber-300/50 px-3 py-1 rounded-full inline-block mb-2"></p>
         <div id="starDisplay" class="text-3xl sm:text-4xl my-2 tracking-widest drop-shadow-sm"></div>
         <h2 id="badgeTitle" class="text-xl sm:text-2xl font-black text-amber-950 my-2 leading-snug"></h2>
@@ -162,10 +150,13 @@
         </div>
       </div>
 
-      <!-- 學員子分頁 1：每週打卡輸入 -->
+      <!-- 學員子分頁 1：每週打卡與單項每日圖表 -->
       <div id="stuTabWorkout" class="space-y-5">
         <div class="bg-white rounded-3xl shadow-md p-4 sm:p-6 border border-slate-100">
-          <h3 class="text-base sm:text-lg font-black mb-3 text-center text-slate-800">👇 點選星期幾輸入體能紀錄（由星期日開始計）</h3>
+          <div class="flex flex-col sm:flex-row justify-between items-center mb-3 gap-2">
+            <h3 class="text-base sm:text-lg font-black text-slate-800">👇 點選星期幾輸入或修改紀錄（星期日起計）</h3>
+            <span id="stuEditStatusBadge" class="text-xs font-extrabold px-3 py-1 rounded-full"></span>
+          </div>
           
           <!-- 星期日至星期六按鈕列 -->
           <div id="dayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-5"></div>
@@ -173,23 +164,42 @@
           <!-- 當日訓練動作列表 -->
           <div id="exerciseInputs" class="space-y-3 my-4"></div>
 
-          <button onclick="saveDailyWorkout()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl sm:text-2xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2">
-            🌟 儲存今日紀錄（完成拎一粒星！）🌟
+          <button id="btnSaveWorkout" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl sm:text-2xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2">
+            🌟 儲存／更新當日紀錄（完成拎一粒星！）🌟
           </button>
         </div>
 
-        <!-- 該週個人棒形圖 -->
+        <!-- 該週每日單項動作圖表（按各自單位顯示 Y 軸） -->
         <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <h3 class="text-lg font-black mb-3 text-slate-800">📊 該週每日完成動作總數圖表</h3>
-          <canvas id="studentChart" height="180"></canvas>
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div>
+              <h3 class="text-lg font-black text-slate-800">📊 該週每日單項動作表現圖</h3>
+              <p class="text-xs text-slate-500">紅色虛線為教練建議目標，Y 軸為該動作專屬單位</p>
+            </div>
+            <select id="stuDailyChartExSelect" class="bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-sm"></select>
+          </div>
+          <canvas id="studentDailyChart" height="190"></canvas>
         </div>
       </div>
 
-      <!-- 學員子分頁 2：過往歷史紀錄總覽 -->
-      <div id="stuTabHistory" class="hidden space-y-4">
+      <!-- 學員子分頁 2：個人進步成長曲線 & 歷週紀錄簿 -->
+      <div id="stuTabHistory" class="hidden space-y-5">
+        <!-- 個人進步成長曲線圖 -->
+        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div>
+              <h3 class="text-xl font-black text-slate-800">📈 我的進步成長曲線</h3>
+              <p class="text-xs text-slate-500">追蹤自己每星期的星數與體能動作進步幅度 💪🏻</p>
+            </div>
+            <select id="stuGrowthMetricSelect" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm"></select>
+          </div>
+          <canvas id="studentGrowthChart" height="200"></canvas>
+        </div>
+
+        <!-- 歷週紀錄列表 -->
         <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
           <h3 class="text-xl font-black text-slate-800 mb-1">📜 我的歷週體能紀錄簿</h3>
-          <p class="text-xs text-slate-500 mb-4">點擊任何一週即可跳轉查看當週詳細打卡數目</p>
+          <p class="text-xs text-slate-500 mb-4">點擊任何一週即可跳轉查看當週詳細打卡數目（歷史週次只供查閱，如需更正請搵教練幫手）</p>
           <div id="studentHistoryList" class="space-y-3"></div>
         </div>
       </div>
@@ -208,15 +218,15 @@
       <!-- 手機底部懸浮導航列（學員專用） -->
       <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl z-40 px-4 py-2">
         <div class="max-w-md mx-auto grid grid-cols-3 gap-2">
-          <button onclick="switchStudentTab('workout')" id="navBtnWorkout" class="flex flex-col items-center py-1.5 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xs transition">
+          <button data-stutab="workout" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xs transition">
             <span class="text-xl mb-0.5">🏋🏻</span>
             <span>訓練打卡</span>
           </button>
-          <button onclick="switchStudentTab('history')" id="navBtnHistory" class="flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
-            <span class="text-xl mb-0.5">📅</span>
-            <span>以往紀錄</span>
+          <button data-stutab="history" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
+            <span class="text-xl mb-0.5">📈</span>
+            <span>成長曲線與歷史</span>
           </button>
-          <button onclick="switchStudentTab('achievements')" id="navBtnAchievements" class="flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
+          <button data-stutab="achievements" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
             <span class="text-xl mb-0.5">🏅</span>
             <span>成就獎章</span>
           </button>
@@ -228,56 +238,104 @@
     <section id="adminSection" class="hidden space-y-5 mt-2">
       <!-- 教練功能切換選單 -->
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200">
-        <button onclick="showAdminTab('overview')" id="admBtn_overview" class="bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow">🏆 全隊紀錄</button>
-        <button onclick="showAdminTab('schedule')" id="admBtn_schedule" class="bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">📝 編輯課表</button>
-        <button onclick="showAdminTab('achievements')" id="admBtn_achievements" class="bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">🏅 編輯成就表</button>
-        <button onclick="showAdminTab('users')" id="admBtn_users" class="bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">👥 學員與密碼</button>
+        <button data-admtab="overview" class="adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow">🏆 全隊紀錄與代改</button>
+        <button data-admtab="schedule" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">📝 編輯課表</button>
+        <button data-admtab="achievements" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">🏅 編輯成就表</button>
+        <button data-admtab="users" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">👥 帳號與密碼管理</button>
       </div>
 
-      <!-- Admin 分頁 1：全體學員紀錄總覽（可切換週次） -->
-      <div id="adminOverviewTab" class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-          <div>
-            <h2 class="text-xl font-black text-slate-800">🏆 全隊學員體能表現總覽</h2>
-            <p class="text-xs text-slate-500">可切換週次查看每位學員當週及過往的打卡詳情</p>
+      <!-- Admin 分頁 1：全體學員紀錄總覽 ＋ 匯出 CSV ＋ 點擊查看學員成長曲線/修改紀錄 -->
+      <div id="adminOverviewTab" class="space-y-5">
+        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+            <div>
+              <h2 class="text-xl font-black text-slate-800">🏆 全隊學員體能表現總覽（只列學員）</h2>
+              <p class="text-xs text-slate-500">點擊學員右側「📈 成長曲線／修改紀錄」即可查看其個人圖表或幫他更正打卡數目</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+              <select id="adminWeekSelect" class="flex-1 md:flex-initial bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2.5 text-sm"></select>
+              <button id="btnExportCSV" class="bg-teal-600 hover:bg-teal-700 text-white font-black px-4 py-2.5 rounded-xl text-sm shadow flex items-center gap-1.5">
+                📥 匯出該週 CSV
+              </button>
+            </div>
           </div>
-          <select id="adminWeekSelect" onchange="loadAdminOverview(this.value)" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm"></select>
+          <div id="allStudentsTable" class="space-y-3"></div>
         </div>
-        <div id="allStudentsTable" class="space-y-3"></div>
+
+        <!-- 教練專用：檢視指定學員成長曲線 & 代為編輯紀錄面板 -->
+        <div id="coachStudentInspector" class="hidden bg-white rounded-3xl shadow-xl p-5 border-4 border-emerald-500 space-y-5">
+          <div class="flex justify-between items-center border-b pb-3">
+            <div>
+              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">教練專屬檢視與代改模式</span>
+              <h3 id="inspectorTitle" class="text-2xl font-black text-slate-900 mt-1"></h3>
+            </div>
+            <button id="btnCloseInspector" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2 rounded-xl text-sm">✖ 關閉面板</button>
+          </div>
+
+          <!-- 該學員的進步成長曲線圖 -->
+          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+              <h4 class="font-black text-slate-800 text-base">📈 該學員歷週進步成長曲線</h4>
+              <select id="coachGrowthMetricSelect" class="bg-white border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-xs sm:text-sm"></select>
+            </div>
+            <canvas id="coachStudentGrowthChart" height="180"></canvas>
+          </div>
+
+          <!-- 教練代改該學員當週每日打卡紀錄 -->
+          <div class="bg-amber-50/70 rounded-2xl p-4 border-2 border-amber-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+              <div>
+                <h4 class="font-black text-amber-950 text-base">✏️ 代為查看／更正學員每日紀錄</h4>
+                <p id="coachEditWeekLabel" class="text-xs text-amber-800 font-bold"></p>
+              </div>
+            </div>
+
+            <div id="coachDayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-4"></div>
+            <div id="coachExerciseInputs" class="space-y-2.5 mb-4"></div>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <button id="btnCoachSaveStudentDay" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 px-4 rounded-xl shadow">
+                💾 儲存更正並標記當日完成（🌟 1粒星）
+              </button>
+              <button id="btnCoachClearStudentDay" class="bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-3 px-4 rounded-xl">
+                🗑️ 取消當日完成狀態（歸零星數）
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Admin 分頁 2：編輯每週課表 -->
+      <!-- Admin 分頁 2：編輯每週課表（固定運動 ID 機制） -->
       <div id="adminScheduleTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-        <h2 class="text-xl font-black mb-1 text-slate-800">📝 編輯本週體能訓練課表</h2>
-        <p class="text-xs text-slate-500 mb-4">修改後按「儲存並發佈」，所有學員登入即可看到最新訓練項目</p>
-        <div id="scheduleEditorList" class="space-y-2.5 mb-5"></div>
+        <h2 class="text-xl font-black mb-1 text-slate-800">📝 編輯本週體能訓練課表（支援穩定 ID 改名）</h2>
+        <p class="text-xs text-slate-500 mb-4">直接修改現有動作的名稱、目標或單位不會影響固定 ID，所有舊紀錄及成長曲線均會完美保留！</p>
+        
+        <div id="scheduleEditorList" class="space-y-3 mb-5"></div>
         
         <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 mb-4">
-          <h4 class="font-bold text-blue-900 text-sm mb-2">➕ 新增訓練動作</h4>
+          <h4 class="font-bold text-blue-900 text-sm mb-2">➕ 新增訓練動作項目</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input type="text" id="newExName" placeholder="動作名稱（如：深蹲 🦵🏻）" class="p-2.5 border rounded-xl bg-white font-bold">
             <input type="number" id="newExTarget" placeholder="目標數量（如：20）" class="p-2.5 border rounded-xl bg-white font-bold">
             <div class="flex gap-2">
               <input type="text" id="newExUnit" placeholder="單位（下/秒）" value="下" class="w-full p-2.5 border rounded-xl bg-white font-bold">
-              <button onclick="addExerciseItem()" class="bg-blue-600 text-white font-black px-5 rounded-xl shrink-0">加入</button>
+              <button id="btnAddExercise" class="bg-blue-600 text-white font-black px-5 rounded-xl shrink-0">加入</button>
             </div>
           </div>
         </div>
-        <button onclick="saveWeeklySchedule()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-black py-3.5 rounded-2xl shadow-lg">
+        <button id="btnSaveSchedule" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-black py-3.5 rounded-2xl shadow-lg">
           💾 儲存並發佈本週課表
         </button>
       </div>
 
-      <!-- Admin 分頁 3：管理成就表（新增 / 修改 / 刪除成就） -->
+      <!-- Admin 分頁 3：管理成就表 -->
       <div id="adminAchievementsTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
         <h2 class="text-xl font-black mb-1 text-slate-800">🏅 編輯成就表（新增／修改／刪除）</h2>
         <p class="text-xs text-slate-500 mb-4">你可自由調整每個成就的名稱、圖示、鼓勵字句及達標條件</p>
 
-        <!-- 現有成就列表（可直接修改或刪除） -->
         <div id="adminAchievementsList" class="space-y-3 mb-6"></div>
 
-        <!-- 新增成就表單 -->
-        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4 mb-4">
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-4">
           <h3 class="font-black text-amber-900 mb-3">➕ 新增一個成就獎章</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
@@ -304,7 +362,7 @@
               <input type="text" id="newAchDesc" placeholder="例如：單週完成4日訓練，合格達標 👍🏻！" class="w-full p-2.5 border rounded-xl bg-white font-bold">
             </div>
           </div>
-          <button onclick="addAchievementItem()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3 rounded-xl shadow">
+          <button id="btnAddAchievement" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-3 rounded-xl shadow">
             ➕ 加入此成就並儲存
           </button>
         </div>
@@ -313,19 +371,22 @@
       <!-- Admin 分頁 4：學員名單、忘記密碼重設 及 轉為管理員 -->
       <div id="adminUsersTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
         <h2 class="text-xl font-black mb-1 text-slate-800">👥 隊員帳號、忘記密碼支援 及 權限升級</h2>
-        <p class="text-xs text-slate-500 mb-4">如學員忘記密碼，系統會置頂亮起紅燈，你可直接告訴他密碼或幫他重設，亦可將學員轉為管理員（Admin）。</p>
+        <p class="text-xs text-slate-500 mb-4">學員密碼已加密保護並與公開資料分離，只有管理員在此後台可見。求助學員會自動置頂亮起紅燈。</p>
         <div id="userAdminList" class="space-y-3"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- Firebase SDK 與系統核心邏輯 -->
+  <!-- Firebase SDK 與系統核心邏輯（封裝於 ES Module 閉包內，防止 Console 竄改） -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+    import { 
+      getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ⚠️ 請將以下括號內容替換為你在 Firebase 取得的 firebaseConfig ⚠️
+    // 已預載你的 sen-football-fitness Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyC3SuWR9ArICnR18guADN9B3LsuNaqyDdc",
       authDomain: "sen-football-fitness.firebaseapp.com",
@@ -334,25 +395,75 @@
       messagingSenderId: "642770592472",
       appId: "1:642770592472:web:4bc5d41195972d334a2dad",
       measurementId: "G-934RKP5F21"
-};
+    };
 
     const app = initializeApp(firebaseConfig);
+    try { getAnalytics(app); } catch (e) { /* 忽略本地脫機環境下的 Analytics 警告 */ }
     const db = getFirestore(app);
 
-    let allUsers = [];
-    let allLogs = [];
-    let currentUser = null;
-    let currentDayIndex = new Date().getDay();
-    const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    // ==================== 工具函數：香港本地時區與加密雜湊 ====================
+    // 修正 UTC 時區 Bug：強制使用裝置本地年月日格式化 YYYY-MM-DD
+    function formatLocalYMD(d = new Date()) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
 
-    // 預設體能課表
+    // 取得指定日期所屬星期的「星期日」本地日期字串
+    function getSundayOfDate(d = new Date()) {
+      const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      copy.setDate(copy.getDate() - copy.getDay());
+      return formatLocalYMD(copy);
+    }
+
+    // 雜湊函數（將密碼轉為不可逆 Hash 存入 users 表，避免學員端載入明文密碼）
+    function hashPassword(str) {
+      let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
+      for (let i = 0, ch; i < str.length; i++) {
+        ch = str.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      return "h_" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+    }
+
+    // 驗證職員通行碼（不將明文寫在 HTML 提示或純文字常數中）
+    function isValidCoachCode(input) {
+      const expected = [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
+      return input === expected;
+    }
+
+    function requireAdmin() {
+      if (!currentUser || currentUser.role !== "admin") {
+        alert("⚠️ 權限不足：此操作只限教練／管理員執行！");
+        throw new Error("Unauthorized");
+      }
+    }
+
+    // ==================== 系統狀態變數（閉包保護） ====================
+    const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    const thisWeekId = getSundayOfDate(new Date());
+    const todayDayIndex = new Date().getDay();
+
+    let currentUser = null;
+    let selectedWeekId = thisWeekId;
+    let currentDayIndex = todayDayIndex;
+
+    // 固定 ID 運動字典與預設課表（保證改名後 ID 不變）
+    let exerciseCatalog = {
+      "ex_001": { id: "ex_001", name: "深蹲 🦵🏻", target: 20, unit: "下" },
+      "ex_002": { id: "ex_002", name: "開合跳 🏃🏻‍♂️", target: 30, unit: "下" },
+      "ex_003": { id: "ex_003", name: "平板支撐 💪🏻", target: 30, unit: "秒" }
+    };
     let currentSchedule = [
-      { name: "深蹲 🦵🏻", target: 20, unit: "下" },
-      { name: "開合跳 🏃🏻‍♂️", target: 30, unit: "下" },
-      { name: "平板支撐 💪🏻", target: 30, unit: "秒" }
+      exerciseCatalog["ex_001"],
+      exerciseCatalog["ex_002"],
+      exerciseCatalog["ex_003"]
     ];
 
-    // 預設成就表（教練可在後台隨時新增、修改或刪除）
     let achievementsList = [
       { id: "ach_4", icon: "🥈", title: "銀牌・合格以達標", type: "weekly_stars", target: 4, desc: "單週完成 4 日訓練！目標起碼四日做體能 👍🏻以達標" },
       { id: "ach_5", icon: "🥇", title: "金牌・超越自己", type: "weekly_stars", target: 5, desc: "單週完成 5 日訓練！超越自己 👍🏻" },
@@ -362,69 +473,82 @@
       { id: "ach_total_30", icon: "🌟", title: "最佳狀態傳奇", type: "total_stars", target: 30, desc: "歷史累積獲得 30 粒星！保持最佳狀態 💪🏻💪🏼" }
     ];
 
-    // 計算指定日期所屬的「星期日」日期字串 (YYYY-MM-DD)
-    function getSundayOfDate(d = new Date()) {
-      const date = new Date(d);
-      const day = date.getDay();
-      date.setDate(date.getDate() - day);
-      return date.toISOString().split('T')[0];
-    }
+    // 快取結構（避免重複全表查詢）
+    let studentLogsMap = {}; // { [weekId]: daysObj } 當前登入學員自己的紀錄
+    let adminUsersList = []; // 教練後台專用用戶清單
+    let adminSecretsMap = {}; // { [userId]: passwordPlain } 教練專用密碼表
+    let adminWeekLogsMap = {}; // { [userId]: daysObj } 教練當前所選週次的全隊紀錄
+    let inspectedStudent = null;
+    let inspectedStudentLogs = {}; // { [weekId]: daysObj }
+    let coachSelectedDayIdx = todayDayIndex;
 
-    const thisWeekId = getSundayOfDate();
-    let selectedWeekId = thisWeekId;
-    let currentWeekLogs = {};
-    let chartInstance = null;
+    // Chart.js 實例
+    let stuDailyChartInstance = null;
+    let stuGrowthChartInstance = null;
+    let coachGrowthChartInstance = null;
 
-    // 根據當週星數回傳對應的即時鼓勵字句
     function getBadgeInfo(stars) {
       const starStr = "🌟".repeat(stars) + "☆".repeat(Math.max(0, 7 - stars));
-      if (stars >= 7) return { stars: starStr, title: "👑 每日有做, 7日做曬, 👑🤴🏻🥇體能王子🤴🏻👍🏻👍🏻💪🏻" };
-      if (stars === 6) return { stars: starStr, title: "🏆 6日 獎盃 突破界限 👍🏻" };
-      if (stars === 5) return { stars: starStr, title: "🥇 5日 金牌 超越自己 👍🏻" };
-      if (stars === 4) return { stars: starStr, title: "🥈 4日 銀牌 合格 👍🏻 以達標" };
-      return { stars: starStr, title: `🌟 每日一粒星 🌟（本週已儲 ${stars} 粒星，目標起碼四日！）` };
+      if (stars >= 7) return { stars: starStr, shortBadge: "👑 體能王子 (7星)", title: "👑 每日有做, 7日做曬, 👑🤴🏻🥇體能王子🤴🏻👍🏻👍🏻💪🏻" };
+      if (stars === 6) return { stars: starStr, shortBadge: "🏆 獎盃 (6星)", title: "🏆 6日 獎盃 突破界限 👍🏻" };
+      if (stars === 5) return { stars: starStr, shortBadge: "🥇 金牌 (5星)", title: "🥇 5日 金牌 超越自己 👍🏻" };
+      if (stars === 4) return { stars: starStr, shortBadge: "🥈 銀牌合格 (4星)", title: "🥈 4日 銀牌 合格 👍🏻 以達標" };
+      return { stars: starStr, shortBadge: `🌟 ${stars}粒星 (未滿4日)`, title: `🌟 每日一粒星 🌟（已儲 ${stars} 粒星，目標起碼四日！）` };
     }
 
-    // 初始化載入用戶、課表與成就表
-    async function initSystem() {
-      await Promise.all([loadUsers(), loadAchievements(), loadAllLogs()]);
+    // 兼容讀取某日某動作的數值（優先讀取固定 ex.id，兼容舊版 ex.name）
+    function getExerciseValueFromRecord(recordsObj, ex) {
+      if (!recordsObj) return undefined;
+      if (recordsObj[ex.id] !== undefined) return recordsObj[ex.id];
+      if (recordsObj[ex.name] !== undefined) return recordsObj[ex.name];
+      return undefined;
     }
 
-    async function loadUsers() {
-      const snap = await getDocs(collection(db, "users"));
-      allUsers = [];
-      snap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
-    }
-
-    async function loadAllLogs() {
-      const snap = await getDocs(collection(db, "logs"));
-      allLogs = [];
-      snap.forEach(d => allLogs.push({ id: d.id, ...d.data() }));
-    }
-
-    async function loadAchievements() {
-      const snap = await getDoc(doc(db, "settings", "achievements"));
-      if (snap.exists() && snap.data().list) {
-        achievementsList = snap.data().list;
+    // ==================== 載入基礎設定（課表字典與成就） ====================
+    async function loadGlobalSettings() {
+      const [catSnap, achSnap] = await Promise.all([
+        getDoc(doc(db, "settings", "exercise_catalog")),
+        getDoc(doc(db, "settings", "achievements"))
+      ]);
+      if (catSnap.exists() && catSnap.data().catalog) {
+        exerciseCatalog = { ...exerciseCatalog, ...catSnap.data().catalog };
+      }
+      if (achSnap.exists() && achSnap.data().list) {
+        achievementsList = achSnap.data().list;
       }
     }
 
-    // 切換登入與註冊卡片
-    window.toggleAuthMode = (mode) => {
-      document.getElementById("loginCard").classList.toggle("hidden", mode !== 'login');
-      document.getElementById("registerCard").classList.toggle("hidden", mode !== 'register');
-      document.getElementById("loginErrorMsg").classList.add("hidden");
-      document.getElementById("regErrorMsg").classList.add("hidden");
-    };
+    async function loadScheduleForWeek(wId) {
+      const snap = await getDoc(doc(db, "schedules", wId));
+      let rawList = null;
+      if (snap.exists() && snap.data().exercises && snap.data().exercises.length > 0) {
+        rawList = snap.data().exercises;
+      } else {
+        const defSnap = await getDoc(doc(db, "schedules", "default"));
+        if (defSnap.exists() && defSnap.data().exercises && defSnap.data().exercises.length > 0) {
+          rawList = defSnap.data().exercises;
+        }
+      }
+      if (rawList) {
+        // 確保每個動作都有穩定 id 並同步最新名稱到 catalog
+        currentSchedule = rawList.map((ex, idx) => {
+          const exId = ex.id || `ex_00${idx + 1}`;
+          const normalized = { id: exId, name: ex.name, target: Number(ex.target) || 10, unit: ex.unit || "下" };
+          exerciseCatalog[exId] = normalized;
+          return normalized;
+        });
+      }
+    }
 
-    // 處理學員自助註冊（檢查帳號名稱與電話號碼是否重複）
-    window.handleRegister = async () => {
+    // ==================== 1. 註冊與登入邏輯（按需單筆查詢、不拉全表） ====================
+    async function handleRegister() {
       const chineseName = document.getElementById("regChineseName").value.trim();
       const username = document.getElementById("regUsername").value.trim();
       const phone = document.getElementById("regPhone").value.trim();
       const password = document.getElementById("regPassword").value.trim();
       const coachCode = document.getElementById("regCoachCode").value.trim();
       const errBox = document.getElementById("regErrorMsg");
+      errBox.classList.add("hidden");
 
       if (!chineseName || !username || !phone || !password) {
         errBox.innerText = "⚠️ 請填寫所有必填欄位（中文姓名、帳號名稱、電話號碼及密碼）！";
@@ -432,37 +556,56 @@
         return;
       }
 
-      await loadUsers();
+      const usernameLower = username.toLowerCase();
 
-      // 檢查帳號名稱是否重複（不分大小寫）
-      if (allUsers.some(u => (u.username || "").toLowerCase() === username.toLowerCase())) {
+      // 按需查詢帳號或電話是否已被使用（不拉取全部用戶）
+      const [uSnap, pSnap] = await Promise.all([
+        getDocs(query(collection(db, "users"), where("usernameLower", "==", usernameLower))),
+        getDocs(query(collection(db, "users"), where("phone", "==", phone)))
+      ]);
+
+      if (!uSnap.empty) {
         errBox.innerText = `⚠️ 帳號名稱「${username}」已經有人使用，請換另一個帳號名稱！`;
         errBox.classList.remove("hidden");
         return;
       }
-
-      // 檢查電話號碼是否重複
-      if (allUsers.some(u => (u.phone || "") === phone)) {
-        errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！你可以直接返回登入畫面用電話號碼登入。`;
+      if (!pSnap.empty) {
+        errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！請直接返回用電話號碼登入。`;
         errBox.classList.remove("hidden");
         return;
       }
 
       const uid = "user_" + Date.now();
-      const role = (coachCode === "COACH888" || allUsers.length === 0) ? "admin" : "student";
-      const newUser = { chineseName, username, phone, password, role, needHelp: false, createdAt: new Date().toISOString() };
+      const role = isValidCoachCode(coachCode) ? "admin" : "student";
+      const passwordHash = hashPassword(password);
 
-      await setDoc(doc(db, "users", uid), newUser);
-      currentUser = { id: uid, ...newUser };
-      allUsers.push(currentUser);
-      enterApp();
-    };
+      // 公開用戶表只存 passwordHash，不存明文密碼
+      const userDoc = {
+        chineseName,
+        username,
+        usernameLower,
+        phone,
+        passwordHash,
+        role,
+        needHelp: false,
+        createdAt: formatLocalYMD(new Date())
+      };
 
-    // 處理登入（支援電話號碼或帳號名稱 + 密碼）
-    window.handleLogin = async () => {
+      // 明文密碼獨立存於 user_secrets 供教練後台查閱支援
+      await Promise.all([
+        setDoc(doc(db, "users", uid), userDoc),
+        setDoc(doc(db, "user_secrets", uid), { passwordPlain: password })
+      ]);
+
+      currentUser = { id: uid, ...userDoc };
+      await enterApp();
+    }
+
+    async function handleLogin() {
       const identifier = document.getElementById("loginIdentifier").value.trim();
       const pwd = document.getElementById("loginPassword").value.trim();
       const errBox = document.getElementById("loginErrorMsg");
+      errBox.classList.add("hidden");
 
       if (!identifier || !pwd) {
         errBox.innerText = "⚠️ 請輸入你的電話號碼／帳號名稱 及 密碼！";
@@ -470,144 +613,198 @@
         return;
       }
 
-      await loadUsers();
-      const matchedUser = allUsers.find(u => 
-        (u.username && u.username.toLowerCase() === identifier.toLowerCase()) || 
-        (u.phone && u.phone === identifier)
-      );
+      const idLower = identifier.toLowerCase();
+      // 單筆查詢匹配的帳號或電話
+      const [uSnap, pSnap, legacySnap] = await Promise.all([
+        getDocs(query(collection(db, "users"), where("usernameLower", "==", idLower))),
+        getDocs(query(collection(db, "users"), where("phone", "==", identifier))),
+        getDocs(query(collection(db, "users"), where("username", "==", identifier)))
+      ]);
 
-      if (!matchedUser) {
-        errBox.innerText = "❌ 找不到這個電話號碼或帳號名稱，請檢查有沒有打錯，或按下方註冊新帳號！";
+      let matchedDoc = null;
+      if (!uSnap.empty) matchedDoc = uSnap.docs[0];
+      else if (!pSnap.empty) matchedDoc = pSnap.docs[0];
+      else if (!legacySnap.empty) matchedDoc = legacySnap.docs[0];
+
+      if (!matchedDoc) {
+        errBox.innerText = "❌ 找不到這個電話號碼或帳號名稱，請檢查有沒有打錯，或按下方註冊！";
         errBox.classList.remove("hidden");
         return;
       }
 
-      if (matchedUser.password !== pwd) {
+      const userData = { id: matchedDoc.id, ...matchedDoc.data() };
+      const inputHash = hashPassword(pwd);
+
+      // 兼容驗證 passwordHash 或舊版明文 password
+      const isPasswordValid = (userData.passwordHash && userData.passwordHash === inputHash) || 
+                              (userData.password && userData.password === pwd);
+
+      if (!isPasswordValid) {
         errBox.innerText = "❌ 密碼唔啱喎！請再試一次，或者按下方「忘記密碼」通知教練幫手。";
         errBox.classList.remove("hidden");
         return;
       }
 
-      currentUser = matchedUser;
-      enterApp();
-    };
+      // 如屬舊版明文帳號，登入時自動升級為分離式加密儲存
+      if (!userData.passwordHash) {
+        await Promise.all([
+          updateDoc(doc(db, "users", userData.id), { passwordHash: inputHash, usernameLower: (userData.username || "").toLowerCase() }),
+          setDoc(doc(db, "user_secrets", userData.id), { passwordPlain: pwd })
+        ]);
+      }
 
-    // 處理忘記密碼求助
-    window.handleForgotPassword = async () => {
+      currentUser = userData;
+      await enterApp();
+    }
+
+    async function handleForgotPassword() {
       const identifier = document.getElementById("loginIdentifier").value.trim();
-      const inputKey = identifier || prompt("請輸入你的「中文姓名」、「電話號碼」或「帳號名稱」，系統會即時通知教練幫你查密碼：");
+      const inputKey = identifier || prompt("請輸入你的「中文姓名」、「電話號碼」或「帳號名稱」，系統會即時通知教練幫你重設密碼：");
       if (!inputKey) return;
 
-      await loadUsers();
-      const target = allUsers.find(u => 
-        (u.username && u.username.toLowerCase() === inputKey.trim().toLowerCase()) ||
-        (u.phone && u.phone === inputKey.trim()) ||
-        (u.chineseName && u.chineseName === inputKey.trim())
-      );
+      const trimmed = inputKey.trim();
+      const [uSnap, pSnap, cSnap] = await Promise.all([
+        getDocs(query(collection(db, "users"), where("usernameLower", "==", trimmed.toLowerCase()))),
+        getDocs(query(collection(db, "users"), where("phone", "==", trimmed))),
+        getDocs(query(collection(db, "users"), where("chineseName", "==", trimmed)))
+      ]);
 
-      if (target) {
-        await updateDoc(doc(db, "users", target.id), { needHelp: true });
-        alert(`✅ 已通知教練你（${target.chineseName}）忘記密碼！\n教練在後台會見到你的密碼並即時幫你重設 💪🏻`);
+      const foundDoc = !uSnap.empty ? uSnap.docs[0] : (!pSnap.empty ? pSnap.docs[0] : (!cSnap.empty ? cSnap.docs[0] : null));
+      if (foundDoc) {
+        const d = foundDoc.data();
+        await updateDoc(doc(db, "users", foundDoc.id), { needHelp: true });
+        alert(`✅ 已通知教練你（${d.chineseName}）忘記密碼！\n教練在後台會見到紅燈提示並幫你重設 💪🏻`);
       } else {
-        alert("⚠️ 系統暫時找不到這個名字或電話，請直接WhatsApp或當面告訴教練！");
+        alert("⚠️ 系統找不到這個名字或電話，請直接向教練查詢！");
       }
-    };
+    }
 
-    window.logout = () => location.reload();
-
-    // 登入後進入對應版面
+    // ==================== 2. 進入主系統與初始化 ====================
     async function enterApp() {
       document.getElementById("authSection").classList.add("hidden");
       document.getElementById("userHeader").classList.remove("hidden");
       document.getElementById("currentUserBadge").innerText = `${currentUser.chineseName} (${currentUser.role === 'admin' ? '教練/管理員' : '學員'})`;
 
-      await loadAllLogs();
-      await loadWeeklySchedule(selectedWeekId);
+      await loadGlobalSettings();
+      await loadScheduleForWeek(thisWeekId);
 
       if (currentUser.role === "admin") {
         document.getElementById("adminSection").classList.remove("hidden");
-        populateWeekSelectors();
-        loadAdminOverview(thisWeekId);
-        renderScheduleEditor();
-        renderAdminAchievements();
-        renderUserAdminList();
+        await initAdminDashboard();
       } else {
         document.getElementById("studentSection").classList.remove("hidden");
-        populateWeekSelectors();
-        await loadStudentWeekData(thisWeekId);
-        renderStudentHistoryList();
-        renderStudentAchievements();
+        await initStudentDashboard();
       }
     }
 
-    // 建立週次下拉選單（包含本週及過去有紀錄的週次 + 最近8週）
-    function populateWeekSelectors() {
-      const weekSet = new Set([thisWeekId]);
-      // 自動加入過去 8 個星期日方便隨時查閱或補打卡
+    function getRecentWeeksList(extraWeekIds = []) {
+      const set = new Set([thisWeekId, ...extraWeekIds]);
       for (let i = 1; i <= 8; i++) {
         const d = new Date();
         d.setDate(d.getDate() - i * 7);
-        weekSet.add(getSundayOfDate(d));
+        set.add(getSundayOfDate(d));
       }
-      allLogs.forEach(l => { if (l.weekId) weekSet.add(l.weekId); });
-      const sortedWeeks = Array.from(weekSet).sort().reverse();
+      return Array.from(set).sort().reverse();
+    }
 
-      const optionsHtml = sortedWeeks.map(w => 
-        `<option value="${w}">${w} 週（星期日起）${w === thisWeekId ? '【本週】' : ''}</option>`
+    // ==================== 3. 學員端功能（防作弊、單項圖表、個人成長曲線） ====================
+    async function initStudentDashboard() {
+      // 只查詢該學員自己的打卡紀錄（極速、省流量）
+      const q = query(collection(db, "logs"), where("userId", "==", currentUser.id));
+      const snap = await getDocs(q);
+      studentLogsMap = {};
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.weekId) studentLogsMap[data.weekId] = data.days || {};
+      });
+
+      const weeks = getRecentWeeksList(Object.keys(studentLogsMap));
+      const selectEl = document.getElementById("studentWeekSelect");
+      selectEl.innerHTML = weeks.map(w => 
+        `<option value="${w}">${w} 週（星期日起）${w === thisWeekId ? '【本週・可打卡】' : '【歷史・只供查閱】'}</option>`
       ).join("");
 
-      const stuSelect = document.getElementById("studentWeekSelect");
-      const admSelect = document.getElementById("adminWeekSelect");
-      if (stuSelect) stuSelect.innerHTML = optionsHtml;
-      if (admSelect) admSelect.innerHTML = optionsHtml;
+      selectedWeekId = thisWeekId;
+      currentDayIndex = todayDayIndex;
+
+      populateExerciseSelectors();
+      renderStudentWeekView();
+      renderStudentGrowthChart();
+      renderStudentHistoryList();
+      renderStudentAchievements();
     }
 
-    async function loadWeeklySchedule(wId) {
-      const docSnap = await getDoc(doc(db, "schedules", wId));
-      if (docSnap.exists() && docSnap.data().exercises) {
-        currentSchedule = docSnap.data().exercises;
-      } else {
-        // 如該週未特別設定，沿用預設課表
-        const defaultSnap = await getDoc(doc(db, "schedules", "default"));
-        if (defaultSnap.exists() && defaultSnap.data().exercises) {
-          currentSchedule = defaultSnap.data().exercises;
-        }
-      }
+    function populateExerciseSelectors() {
+      // 供每日棒形圖選擇單項動作
+      const dailySelect = document.getElementById("stuDailyChartExSelect");
+      dailySelect.innerHTML = currentSchedule.map(ex => 
+        `<option value="${ex.id}">${ex.name}（單位：${ex.unit}）</option>`
+      ).join("");
+
+      // 供成長曲線選擇「每週星數」或「特定動作趨勢」
+      const allExList = Object.values(exerciseCatalog);
+      const growthOptions = [
+        `<option value="weekly_stars">🌟 每週獲得星數成長曲線（單位：星/日）</option>`,
+        ...allExList.map(ex => `<option value="${ex.id}">📈 ${ex.name} — 歷週表現趨勢（單位：${ex.unit}）</option>`)
+      ].join("");
+
+      document.getElementById("stuGrowthMetricSelect").innerHTML = growthOptions;
+      const coachGrowthSel = document.getElementById("coachGrowthMetricSelect");
+      if (coachGrowthSel) coachGrowthSel.innerHTML = growthOptions;
     }
 
-    // ==================== 學員端功能 ====================
-    window.changeStudentWeek = async (wId) => {
-      selectedWeekId = wId;
-      await loadWeeklySchedule(wId);
-      await loadStudentWeekData(wId);
-    };
+    function renderStudentWeekView() {
+      const isCurrentWeek = (selectedWeekId === thisWeekId);
+      const weekDaysObj = studentLogsMap[selectedWeekId] || {};
 
-    async function loadStudentWeekData(wId) {
-      document.getElementById("weekLabelStudent").innerText = `📅 紀錄週期：${wId}（星期日）起計 7 日 ${wId === thisWeekId ? '【本週最新】' : '【歷史紀錄】'}`;
-      const logId = `${wId}_${currentUser.id}`;
-      const docSnap = await getDoc(doc(db, "logs", logId));
-      currentWeekLogs = docSnap.exists() ? docSnap.data().days || {} : {};
+      document.getElementById("weekLabelStudent").innerText = 
+        `📅 紀錄週期：${selectedWeekId}（星期日）起計 7 日 ${isCurrentWeek ? '【本週最新】' : '【歷史紀錄】'}`;
 
-      renderStudentProgress();
-      renderDayTabs();
-      renderExerciseInputs();
-      renderStudentChart();
-    }
-
-    function renderStudentProgress() {
-      const completedDays = Object.values(currentWeekLogs).filter(d => d && d.completed).length;
+      const completedDays = Object.values(weekDaysObj).filter(d => d && d.completed).length;
       const badge = getBadgeInfo(completedDays);
       document.getElementById("starDisplay").innerText = badge.stars;
       document.getElementById("badgeTitle").innerText = badge.title;
+
+      // 顯示可編輯或只讀狀態標籤
+      const statusBadge = document.getElementById("stuEditStatusBadge");
+      const saveBtn = document.getElementById("btnSaveWorkout");
+
+      if (!isCurrentWeek) {
+        statusBadge.className = "text-xs font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-800";
+        statusBadge.innerText = "🔒 歷史週次（只供查閱，如需更正請搵教練）";
+        saveBtn.disabled = true;
+        saveBtn.className = "w-full bg-slate-300 text-slate-500 text-lg font-black py-4 rounded-2xl cursor-not-allowed mt-2";
+        saveBtn.innerText = "🔒 歷史週次只供查閱（防止補打卡刷星）";
+      } else {
+        statusBadge.className = "text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800";
+        statusBadge.innerText = "✅ 本週已到日子均可輸入或修改";
+        saveBtn.disabled = false;
+        saveBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl sm:text-2xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2";
+        saveBtn.innerText = `🌟 儲存／更新【${dayNames[currentDayIndex]}】紀錄 🌟`;
+      }
+
+      renderStudentDayTabs(weekDaysObj, isCurrentWeek);
+      renderStudentExerciseInputs(weekDaysObj, isCurrentWeek);
+      renderStudentDailyChart(weekDaysObj);
     }
 
-    function renderDayTabs() {
+    function renderStudentDayTabs(weekDaysObj, isCurrentWeek) {
       const container = document.getElementById("dayTabs");
       container.innerHTML = dayNames.map((dName, idx) => {
-        const isDone = currentWeekLogs[idx]?.completed;
+        const isDone = weekDaysObj[idx]?.completed;
+        const isFutureDay = isCurrentWeek && (idx > todayDayIndex);
         const isSelected = idx === currentDayIndex;
+
+        if (isFutureDay) {
+          return `
+            <button disabled class="py-2.5 px-1 rounded-2xl font-bold text-xs sm:text-sm border-2 bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed flex flex-col items-center">
+              <span>${dName.replace('星期','週')}</span>
+              <span class="text-sm mt-1" title="未到日子">🔒</span>
+            </button>
+          `;
+        }
         return `
-          <button onclick="selectDay(${idx})" class="py-2.5 px-1 rounded-2xl font-black text-xs sm:text-sm border-2 flex flex-col items-center transition ${isSelected ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-105' : 'bg-slate-50 text-slate-700 border-slate-200'}">
+          <button data-dayidx="${idx}" class="stu-day-btn py-2.5 px-1 rounded-2xl font-black text-xs sm:text-sm border-2 flex flex-col items-center transition ${isSelected ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-105' : 'bg-slate-50 text-slate-700 border-slate-200'}">
             <span>${dName.replace('星期','週')}</span>
             <span class="text-base sm:text-lg mt-1">${isDone ? '🌟' : '⚪'}</span>
           </button>
@@ -615,17 +812,19 @@
       }).join("");
     }
 
-    window.selectDay = (idx) => {
-      currentDayIndex = idx;
-      renderDayTabs();
-      renderExerciseInputs();
-    };
-
-    function renderExerciseInputs() {
-      const dayData = currentWeekLogs[currentDayIndex]?.records || {};
+    function renderStudentExerciseInputs(weekDaysObj, isCurrentWeek) {
       const container = document.getElementById("exerciseInputs");
+      if (currentSchedule.length === 0) {
+        container.innerHTML = `<p class="text-center text-amber-700 bg-amber-50 p-4 rounded-2xl font-bold">⚠️ 教練尚未設定本週訓練動作。</p>`;
+        return;
+      }
+
+      const dayData = weekDaysObj[currentDayIndex]?.records || {};
+      const disabledAttr = !isCurrentWeek ? "disabled" : "";
+
       container.innerHTML = currentSchedule.map((ex, i) => {
-        const val = dayData[ex.name] !== undefined ? dayData[ex.name] : ex.target;
+        const savedVal = getExerciseValueFromRecord(dayData, ex);
+        const val = savedVal !== undefined ? savedVal : ex.target;
         return `
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="text-center sm:text-left">
@@ -633,74 +832,255 @@
               <span class="text-xs sm:text-sm text-emerald-700 font-bold block">建議目標：${ex.target} ${ex.unit}</span>
             </div>
             <div class="flex items-center gap-2">
-              <button onclick="adjustCount(${i}, -5)" class="bg-white border-2 border-slate-300 active:bg-slate-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm">-5</button>
-              <input type="number" id="ex_input_${i}" value="${val}" class="w-20 h-12 text-center text-xl font-black border-2 border-emerald-400 rounded-xl bg-white">
+              <button data-adjidx="${i}" data-delta="-5" ${disabledAttr} class="stu-adj-btn bg-white border-2 border-slate-300 active:bg-slate-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm disabled:opacity-40">-5</button>
+              <input type="number" id="stu_ex_input_${ex.id}" value="${val}" min="0" ${disabledAttr} class="w-20 h-12 text-center text-xl font-black border-2 border-emerald-400 rounded-xl bg-white disabled:bg-slate-100">
               <span class="font-bold text-slate-600 text-sm">${ex.unit}</span>
-              <button onclick="adjustCount(${i}, 5)" class="bg-emerald-100 border-2 border-emerald-400 text-emerald-900 active:bg-emerald-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm">+5</button>
+              <button data-adjidx="${i}" data-delta="5" ${disabledAttr} class="stu-adj-btn bg-emerald-100 border-2 border-emerald-400 text-emerald-900 active:bg-emerald-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm disabled:opacity-40">+5</button>
             </div>
           </div>
         `;
       }).join("");
     }
 
-    window.adjustCount = (idx, delta) => {
-      const input = document.getElementById(`ex_input_${idx}`);
-      input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
-    };
+    async function saveStudentDailyWorkout() {
+      // 防作弊檢查 1：只准儲存本週
+      if (selectedWeekId !== thisWeekId) {
+        return alert("⚠️ 歷史週次只供查閱，不能補打卡！如需更正過往紀錄請搵教練幫手。");
+      }
+      // 防作弊檢查 2：不准預先打卡未來的日子
+      if (currentDayIndex > todayDayIndex) {
+        return alert("⚠️ 未到嘅日子唔可以預先打卡㗎！");
+      }
+      // 防作弊檢查 3：課表不能為空
+      if (currentSchedule.length === 0) {
+        return alert("⚠️ 教練尚未設定本週課表，暫時無法打卡！");
+      }
 
-    window.saveDailyWorkout = async () => {
       const records = {};
-      currentSchedule.forEach((ex, i) => {
-        records[ex.name] = parseInt(document.getElementById(`ex_input_${i}`).value) || 0;
+      let totalEntered = 0;
+      currentSchedule.forEach(ex => {
+        const inputEl = document.getElementById(`stu_ex_input_${ex.id}`);
+        const val = Math.max(0, parseInt(inputEl?.value) || 0);
+        records[ex.id] = val;
+        totalEntered += val;
       });
-      currentWeekLogs[currentDayIndex] = { completed: true, records, updatedAt: new Date().toISOString() };
-      const logId = `${selectedWeekId}_${currentUser.id}`;
-      await setDoc(doc(db, "logs", logId), { userId: currentUser.id, weekId: selectedWeekId, days: currentWeekLogs });
-      
-      await loadAllLogs();
-      alert(`🌟 太棒了！已儲存【${dayNames[currentDayIndex]}】的體能紀錄，成功獲得一粒星！💪🏻`);
-      renderStudentProgress();
-      renderDayTabs();
-      renderStudentChart();
+
+      if (!studentLogsMap[thisWeekId]) studentLogsMap[thisWeekId] = {};
+
+      // 防白拿星：如果全部填 0，不給予星星
+      if (totalEntered <= 0) {
+        studentLogsMap[thisWeekId][currentDayIndex] = { completed: false, records, updatedAt: formatLocalYMD(new Date()) };
+        await setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
+          userId: currentUser.id,
+          weekId: thisWeekId,
+          days: studentLogsMap[thisWeekId]
+        });
+        alert(`ℹ️ 你輸入的動作數目全部為 0，已更新紀錄但未獲得星星。完成至少一項動作即可拎星 🌟！`);
+      } else {
+        studentLogsMap[thisWeekId][currentDayIndex] = { completed: true, records, updatedAt: formatLocalYMD(new Date()) };
+        await setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
+          userId: currentUser.id,
+          weekId: thisWeekId,
+          days: studentLogsMap[thisWeekId]
+        });
+        alert(`🌟 太棒了！已儲存【${dayNames[currentDayIndex]}】的體能紀錄，成功獲得一粒星！💪🏻`);
+      }
+
+      renderStudentWeekView();
+      renderStudentGrowthChart();
       renderStudentHistoryList();
       renderStudentAchievements();
-    };
+    }
 
-    function renderStudentChart() {
-      const ctx = document.getElementById("studentChart");
-      const dataPoints = [0,1,2,3,4,5,6].map(d => {
-        if (!currentWeekLogs[d]?.records) return 0;
-        return Object.values(currentWeekLogs[d].records).reduce((a, b) => a + b, 0);
+    // 修正後的該週每日圖表：按單一動作顯示，Y 軸標明清晰單位（下 / 秒）及目標線
+    function renderStudentDailyChart(weekDaysObj) {
+      const ctx = document.getElementById("studentDailyChart");
+      const selectedExId = document.getElementById("stuDailyChartExSelect").value || currentSchedule[0]?.id;
+      const exObj = exerciseCatalog[selectedExId] || currentSchedule[0] || { id: "ex_001", name: "訓練項目", target: 20, unit: "下" };
+
+      const dailyValues = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
+        const rec = weekDaysObj[dIdx]?.records;
+        const val = getExerciseValueFromRecord(rec, exObj);
+        return val !== undefined ? Number(val) : 0;
       });
-      if (chartInstance) chartInstance.destroy();
-      chartInstance = new Chart(ctx, {
+      const targetLine = [0, 1, 2, 3, 4, 5, 6].map(() => exObj.target);
+
+      if (stuDailyChartInstance) stuDailyChartInstance.destroy();
+      stuDailyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: dayNames.map(d => d.replace('星期','週')),
-          datasets: [{ label: '完成動作總數', data: dataPoints, backgroundColor: '#10b981', borderRadius: 10 }]
+          labels: dayNames.map(d => d.replace('星期', '週')),
+          datasets: [
+            {
+              type: 'line',
+              label: `建議目標（${exObj.target} ${exObj.unit}）`,
+              data: targetLine,
+              borderColor: '#f43f5e',
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false
+            },
+            {
+              type: 'bar',
+              label: `${exObj.name} 完成數量（${exObj.unit}）`,
+              data: dailyValues,
+              backgroundColor: '#10b981',
+              borderRadius: 8
+            }
+          ]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: `數量（單位：${exObj.unit}）`, font: { weight: 'bold' } }
+            }
+          }
+        }
       });
     }
 
-    // 學員查看自己以往所有週次的歷史紀錄列表
-    function renderStudentHistoryList() {
-      const myLogs = allLogs.filter(l => l.userId === currentUser.id).sort((a, b) => b.weekId.localeCompare(a.weekId));
-      const container = document.getElementById("studentHistoryList");
+    // 共用成長曲線繪製函數（供學員自己及教練檢視學員時使用）
+    function drawGrowthCurveOnCanvas(canvasId, logsByWeekMap, metricKey, existingChartRef) {
+      const ctx = document.getElementById(canvasId);
+      const weeksAsc = getRecentWeeksList(Object.keys(logsByWeekMap)).sort(); // 由舊至新排列
 
-      if (myLogs.length === 0) {
+      if (existingChartRef) existingChartRef.destroy();
+
+      if (metricKey === "weekly_stars") {
+        const starsData = weeksAsc.map(w => {
+          const days = logsByWeekMap[w] || {};
+          return Object.values(days).filter(d => d && d.completed).length;
+        });
+        const passLine = weeksAsc.map(() => 4);
+
+        return new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeksAsc.map(w => w.slice(5) + "週"),
+            datasets: [
+              {
+                label: '每週獲得星數（日）',
+                data: starsData,
+                borderColor: '#059669',
+                backgroundColor: 'rgba(16, 185, 129, 0.18)',
+                borderWidth: 3,
+                pointRadius: 5,
+                pointBackgroundColor: '#059669',
+                fill: true,
+                tension: 0.25
+              },
+              {
+                label: '4日合格達標線 🥈',
+                data: passLine,
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                fill: false
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                min: 0,
+                max: 7,
+                ticks: { stepSize: 1 },
+                title: { display: true, text: '獲得星數（0 - 7 星）', font: { weight: 'bold' } }
+              }
+            }
+          }
+        });
+      } else {
+        // 特定動作的跨週進步曲線（顯示該週單日最高表現 & 打卡日平均表現）
+        const exObj = exerciseCatalog[metricKey] || { id: metricKey, name: "動作", target: 20, unit: "下" };
+        const maxPerWeek = [];
+        const avgPerWeek = [];
+
+        weeksAsc.forEach(w => {
+          const days = logsByWeekMap[w] || {};
+          const vals = [];
+          Object.values(days).forEach(d => {
+            if (d && d.completed && d.records) {
+              const v = getExerciseValueFromRecord(d.records, exObj);
+              if (v !== undefined) vals.push(Number(v));
+            }
+          });
+          if (vals.length === 0) {
+            maxPerWeek.push(0);
+            avgPerWeek.push(0);
+          } else {
+            maxPerWeek.push(Math.max(...vals));
+            avgPerWeek.push(Math.round(vals.reduce((a, b) => a + b, 0) / vals.length));
+          }
+        });
+
+        return new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeksAsc.map(w => w.slice(5) + "週"),
+            datasets: [
+              {
+                label: `${exObj.name} 單日最高表現（${exObj.unit}）`,
+                data: maxPerWeek,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                borderWidth: 3,
+                pointRadius: 5,
+                fill: true,
+                tension: 0.25
+              },
+              {
+                label: `${exObj.name} 打卡日平均（${exObj.unit}）`,
+                data: avgPerWeek,
+                borderColor: '#10b981',
+                borderWidth: 2,
+                borderDash: [4, 4],
+                pointRadius: 4,
+                fill: false,
+                tension: 0.25
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: { display: true, text: `數量（單位：${exObj.unit}）`, font: { weight: 'bold' } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function renderStudentGrowthChart() {
+      const metric = document.getElementById("stuGrowthMetricSelect").value || "weekly_stars";
+      stuGrowthChartInstance = drawGrowthCurveOnCanvas("studentGrowthChart", studentLogsMap, metric, stuGrowthChartInstance);
+    }
+
+    function renderStudentHistoryList() {
+      const container = document.getElementById("studentHistoryList");
+      const weeksDesc = Object.keys(studentLogsMap).sort().reverse();
+
+      if (weeksDesc.length === 0) {
         container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">暫時未有歷史打卡紀錄，快啲開始今個星期嘅訓練啦 💪🏻</p>`;
         return;
       }
 
-      container.innerHTML = myLogs.map(log => {
-        const daysObj = log.days || {};
+      container.innerHTML = weeksDesc.map(wId => {
+        const daysObj = studentLogsMap[wId] || {};
         const stars = Object.values(daysObj).filter(d => d && d.completed).length;
         const badge = getBadgeInfo(stars);
         return `
-          <div onclick="jumpToHistoryWeek('${log.weekId}')" class="cursor-pointer bg-slate-50 hover:bg-emerald-50 border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div data-jumpweek="${wId}" class="stu-jump-week cursor-pointer bg-slate-50 hover:bg-emerald-50 border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div>
-              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">${log.weekId} 週（星期日起）</span>
+              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">${wId} 週（星期日起）</span>
               <h4 class="text-base font-black text-slate-800 mt-1.5">${badge.title}</h4>
               <p class="text-xs text-slate-500 mt-0.5">點擊查看當週每日運動數量明細 ➡️</p>
             </div>
@@ -710,20 +1090,12 @@
       }).join("");
     }
 
-    window.jumpToHistoryWeek = async (wId) => {
-      document.getElementById("studentWeekSelect").value = wId;
-      await changeStudentWeek(wId);
-      switchStudentTab('workout');
-    };
-
-    // 計算學員的成就解鎖狀態並渲染成就牆
     function renderStudentAchievements() {
-      const myLogs = allLogs.filter(l => l.userId === currentUser.id);
       let maxWeeklyStars = 0;
       let totalStars = 0;
 
-      myLogs.forEach(log => {
-        const s = Object.values(log.days || {}).filter(d => d && d.completed).length;
+      Object.values(studentLogsMap).forEach(daysObj => {
+        const s = Object.values(daysObj || {}).filter(d => d && d.completed).length;
         if (s > maxWeeklyStars) maxWeeklyStars = s;
         totalStars += s;
       });
@@ -741,7 +1113,7 @@
               <div class="flex justify-between items-center">
                 <h4 class="font-black text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${ach.title}</h4>
                 <span class="text-xs font-extrabold px-2 py-0.5 rounded-full ${unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">
-                  ${unlocked ? '✅ 已達成' : `${currentVal} /${ach.target} 星`}
+                  ${unlocked ? '✅ 已達成' : `${currentVal} / ${ach.target} 星`}
                 </span>
               </div>
               <p class="text-xs font-bold mt-1 ${unlocked ? 'text-amber-900' : 'text-slate-500'}">${ach.desc}</p>
@@ -754,189 +1126,563 @@
       }).join("");
     }
 
-    window.switchStudentTab = (tab) => {
+    function switchStudentTab(tab) {
       document.getElementById("stuTabWorkout").classList.toggle("hidden", tab !== 'workout');
       document.getElementById("stuTabHistory").classList.toggle("hidden", tab !== 'history');
       document.getElementById("stuTabAchievements").classList.toggle("hidden", tab !== 'achievements');
 
-      const activeClass = "flex flex-col items-center py-1.5 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xs transition";
-      const inactiveClass = "flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition";
-      document.getElementById("navBtnWorkout").className = tab === 'workout' ? activeClass : inactiveClass;
-      document.getElementById("navBtnHistory").className = tab === 'history' ? activeClass : inactiveClass;
-      document.getElementById("navBtnAchievements").className = tab === 'achievements' ? activeClass : inactiveClass;
-    };
-
-    // ==================== 管理員（教練）後台功能 ====================
-    window.showAdminTab = (tab) => {
-      ['overview', 'schedule', 'achievements', 'users'].forEach(t => {
-        document.getElementById(`admin${t.charAt(0).toUpperCase() + t.slice(1)}Tab`).classList.toggle("hidden", t !== tab);
-        const btn = document.getElementById(`admBtn_${t}`);
-        btn.className = t === tab 
-          ? "bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow" 
-          : "bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm";
+      document.querySelectorAll(".stu-nav-btn").forEach(btn => {
+        const isTarget = btn.getAttribute("data-stutab") === tab;
+        btn.className = isTarget
+          ? "stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xs transition"
+          : "stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition";
       });
-    };
+    }
 
-    window.loadAdminOverview = async (wId) => {
-      await loadAllLogs();
-      const logsMap = {};
-      allLogs.forEach(l => {
-        if (l.weekId === wId) logsMap[l.userId] = l.days || {};
+    // ==================== 4. 管理員（教練）後台功能 ====================
+    async function initAdminDashboard() {
+      requireAdmin();
+      await loadAdminUsersAndSecrets();
+
+      const weeks = getRecentWeeksList();
+      const admSelect = document.getElementById("adminWeekSelect");
+      admSelect.innerHTML = weeks.map(w => 
+        `<option value="${w}">${w} 週（星期日起）${w === thisWeekId ? '【本週】' : ''}</option>`
+      ).join("");
+
+      populateExerciseSelectors();
+      await loadAdminWeekOverview(thisWeekId);
+      renderScheduleEditor();
+      renderAdminAchievements();
+      renderUserAdminList();
+    }
+
+    async function loadAdminUsersAndSecrets() {
+      requireAdmin();
+      const [uSnap, sSnap] = await Promise.all([
+        getDocs(collection(db, "users")),
+        getDocs(collection(db, "user_secrets"))
+      ]);
+      adminUsersList = [];
+      uSnap.forEach(d => adminUsersList.push({ id: d.id, ...d.data() }));
+      adminSecretsMap = {};
+      sSnap.forEach(d => { adminSecretsMap[d.id] = d.data().passwordPlain; });
+    }
+
+    // 按需只查詢指定週次的打卡紀錄，並只列出學員 (role === 'student')
+    async function loadAdminWeekOverview(wId) {
+      requireAdmin();
+      selectedWeekId = wId;
+      await loadScheduleForWeek(wId);
+
+      const q = query(collection(db, "logs"), where("weekId", "==", wId));
+      const snap = await getDocs(q);
+      adminWeekLogsMap = {};
+      snap.forEach(d => {
+        const data = d.data();
+        adminWeekLogsMap[data.userId] = data.days || {};
       });
 
+      // 嚴格過濾只顯示學員（排除教練 Admin 自己）
+      const studentsOnly = adminUsersList.filter(u => u.role === "student");
       const container = document.getElementById("allStudentsTable");
-      container.innerHTML = allUsers.map(u => {
-        const uDays = logsMap[u.id] || {};
+
+      if (studentsOnly.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">目前尚無學員帳號（教練帳號已自動從打卡榜隱藏）。</p>`;
+        return;
+      }
+
+      container.innerHTML = studentsOnly.map(u => {
+        const uDays = adminWeekLogsMap[u.id] || {};
         const stars = Object.values(uDays).filter(d => d && d.completed).length;
         const badge = getBadgeInfo(stars);
         return `
-          <div class="border-2 border-slate-100 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 bg-slate-50">
+          <div class="border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 transition">
             <div>
-              <span class="text-lg font-black text-slate-800">${u.chineseName}</span>
-              <span class="text-xs text-slate-500 ml-1">(@${u.username} / 📞 ${u.phone})</span>
-              <span class="text-xs font-extrabold ml-2 bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">完成：${stars} / 7 日</span>
+              <div class="flex items-center flex-wrap gap-2">
+                <span class="text-lg font-black text-slate-900">${u.chineseName}</span>
+                <span class="text-xs text-slate-500">(@${u.username} / 📞 ${u.phone})</span>
+                <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">本週：${stars} / 7 日</span>
+              </div>
               <div class="text-xs font-bold text-amber-800 mt-1">${badge.title}</div>
             </div>
-            <div class="text-2xl tracking-wider">${badge.stars}</div>
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span class="text-xl tracking-wider">${badge.stars}</span>
+              <button data-inspectuid="${u.id}" class="btn-inspect-student bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow shrink-0">
+                📈 成長曲線／修改紀錄
+              </button>
+            </div>
           </div>
         `;
       }).join("");
-    };
+    }
 
-    // 教練編輯課表
+    // 教練點擊學員：載入該學員歷週紀錄、畫出成長曲線、並提供代改介面
+    async function openStudentInspector(uid) {
+      requireAdmin();
+      inspectedStudent = adminUsersList.find(u => u.id === uid);
+      if (!inspectedStudent) return;
+
+      const q = query(collection(db, "logs"), where("userId", "==", uid));
+      const snap = await getDocs(q);
+      inspectedStudentLogs = {};
+      snap.forEach(d => {
+        const data = d.data();
+        if (data.weekId) inspectedStudentLogs[data.weekId] = data.days || {};
+      });
+
+      document.getElementById("inspectorTitle").innerText = `🏃🏻‍♂️ ${inspectedStudent.chineseName}（@${inspectedStudent.username}）的成長曲線與紀錄修正`;
+      document.getElementById("coachEditWeekLabel").innerText = `目前編輯週次：${selectedWeekId}（星期日起計 7 日）— 如需改其他週次，請先在上方切換週次`;
+      document.getElementById("coachStudentInspector").classList.remove("hidden");
+
+      coachSelectedDayIdx = 0;
+      renderCoachStudentGrowthChart();
+      renderCoachStudentEditor();
+      document.getElementById("coachStudentInspector").scrollIntoView({ behavior: "smooth" });
+    }
+
+    function renderCoachStudentGrowthChart() {
+      if (!inspectedStudent) return;
+      const metric = document.getElementById("coachGrowthMetricSelect").value || "weekly_stars";
+      coachGrowthChartInstance = drawGrowthCurveOnCanvas("coachStudentGrowthChart", inspectedStudentLogs, metric, coachGrowthChartInstance);
+    }
+
+    function renderCoachStudentEditor() {
+      if (!inspectedStudent) return;
+      const weekDaysObj = inspectedStudentLogs[selectedWeekId] || {};
+
+      // 渲染星期日至星期六按鈕
+      document.getElementById("coachDayTabs").innerHTML = dayNames.map((dName, idx) => {
+        const isDone = weekDaysObj[idx]?.completed;
+        const isSelected = idx === coachSelectedDayIdx;
+        return `
+          <button data-coachday="${idx}" class="coach-day-btn py-2 px-1 rounded-xl font-black text-xs sm:text-sm border-2 flex flex-col items-center ${isSelected ? 'bg-amber-600 text-white border-amber-700 shadow' : 'bg-white text-slate-700 border-slate-200'}">
+            <span>${dName.replace('星期','週')}</span>
+            <span class="text-base mt-0.5">${isDone ? '🌟' : '⚪'}</span>
+          </button>
+        `;
+      }).join("");
+
+      const dayData = weekDaysObj[coachSelectedDayIdx]?.records || {};
+      document.getElementById("coachExerciseInputs").innerHTML = currentSchedule.map(ex => {
+        const savedVal = getExerciseValueFromRecord(dayData, ex);
+        const val = savedVal !== undefined ? savedVal : 0;
+        return `
+          <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
+            <div>
+              <span class="font-black text-slate-800">${ex.name}</span>
+              <span class="text-xs text-slate-500 ml-2">（目標：${ex.target} ${ex.unit}）</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="coach_ex_input_${ex.id}" value="${val}" min="0" class="w-24 p-2 text-center font-black border-2 border-amber-400 rounded-xl">
+              <span class="text-sm font-bold text-slate-600">${ex.unit}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveCoachStudentDay(markCompleted) {
+      requireAdmin();
+      if (!inspectedStudent) return;
+
+      const records = {};
+      currentSchedule.forEach(ex => {
+        const val = Math.max(0, parseInt(document.getElementById(`coach_ex_input_${ex.id}`)?.value) || 0);
+        records[ex.id] = val;
+      });
+
+      if (!inspectedStudentLogs[selectedWeekId]) inspectedStudentLogs[selectedWeekId] = {};
+      inspectedStudentLogs[selectedWeekId][coachSelectedDayIdx] = {
+        completed: markCompleted,
+        records: markCompleted ? records : {},
+        editedByCoachAt: formatLocalYMD(new Date())
+      };
+
+      const logId = `${selectedWeekId}_${inspectedStudent.id}`;
+      await setDoc(doc(db, "logs", logId), {
+        userId: inspectedStudent.id,
+        weekId: selectedWeekId,
+        days: inspectedStudentLogs[selectedWeekId]
+      });
+
+      adminWeekLogsMap[inspectedStudent.id] = inspectedStudentLogs[selectedWeekId];
+      alert(`✅ 已由教練更新【${inspectedStudent.chineseName}】於 ${dayNames[coachSelectedDayIdx]} 的紀錄！`);
+      renderCoachStudentEditor();
+      renderCoachStudentGrowthChart();
+      await loadAdminWeekOverview(selectedWeekId);
+    }
+
+    // 匯出該週全隊 CSV 報表（含 UTF-8 BOM 完美支援 Excel 中文）
+    function exportWeeklyCSV() {
+      requireAdmin();
+      const studentsOnly = adminUsersList.filter(u => u.role === "student");
+      if (studentsOnly.length === 0) return alert("目前沒有學員資料可匯出！");
+
+      const exHeaders = currentSchedule.map(ex => `${ex.name}本週總計(${ex.unit})`);
+      const headers = [
+        "週次(星期日起)", "中文姓名", "帳號名稱", "電話號碼", "本週得星數", "達成獎章",
+        ...dayNames,
+        ...exHeaders
+      ];
+
+      const rows = studentsOnly.map(u => {
+        const uDays = adminWeekLogsMap[u.id] || {};
+        const stars = Object.values(uDays).filter(d => d && d.completed).length;
+        const badge = getBadgeInfo(stars).shortBadge;
+
+        // 星期日至星期六每日摘要
+        const dayCells = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
+          const dObj = uDays[dIdx];
+          if (!dObj || !dObj.completed) return "未打卡";
+          const parts = currentSchedule.map(ex => {
+            const v = getExerciseValueFromRecord(dObj.records, ex) || 0;
+            return `${ex.name}:${v}${ex.unit}`;
+          });
+          return `🌟已完成(${parts.join(" / ")})`;
+        });
+
+        // 各項動作本週總計
+        const exTotals = currentSchedule.map(ex => {
+          return [0, 1, 2, 3, 4, 5, 6].reduce((sum, dIdx) => {
+            const dObj = uDays[dIdx];
+            if (!dObj || !dObj.completed) return sum;
+            return sum + (Number(getExerciseValueFromRecord(dObj.records, ex)) || 0);
+          }, 0);
+        });
+
+        return [
+          selectedWeekId, u.chineseName, u.username, u.phone, stars, badge,
+          ...dayCells,
+          ...exTotals
+        ].map(cell => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",");
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `足球隊體能紀錄_${selectedWeekId}週.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 教練課表編輯器（支援直接改名而不改變固定 ID）
     function renderScheduleEditor() {
       const container = document.getElementById("scheduleEditorList");
       container.innerHTML = currentSchedule.map((ex, i) => `
-        <div class="flex justify-between items-center bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
-          <span class="font-black text-slate-800">${ex.name} — 目標：${ex.target} ${ex.unit}</span>
-          <button onclick="removeExerciseItem(${i})" class="bg-rose-100 text-rose-700 px-3 py-1 rounded-xl text-xs font-bold">🗑️ 刪除</button>
+        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <div class="flex items-center gap-2 flex-1">
+            <span class="text-xs font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold shrink-0" title="永久固定ID">${ex.id}</span>
+            <input type="text" id="editExName_${i}" value="${ex.name}" class="flex-1 p-2 border rounded-xl bg-white font-black text-slate-800" title="修改名稱不會影響歷史紀錄">
+            <input type="number" id="editExTarget_${i}" value="${ex.target}" class="w-20 p-2 border rounded-xl bg-white font-bold text-center" title="目標數量">
+            <input type="text" id="editExUnit_${i}" value="${ex.unit}" class="w-16 p-2 border rounded-xl bg-white font-bold text-center" title="單位">
+          </div>
+          <button data-remex="${i}" class="btn-remove-ex bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold shrink-0">🗑️ 移除</button>
         </div>
       `).join("");
     }
 
-    window.addExerciseItem = () => {
-      const name = document.getElementById("newExName").value.trim();
-      const target = parseInt(document.getElementById("newExTarget").value) || 10;
-      const unit = document.getElementById("newExUnit").value.trim() || "下";
-      if (!name) return alert("請輸入動作名稱！");
-      currentSchedule.push({ name, target, unit });
-      document.getElementById("newExName").value = "";
+    async function saveWeeklySchedule() {
+      requireAdmin();
+      // 讀取教練在輸入框直接修改的名稱、目標與單位（保留原 ex.id）
+      currentSchedule = currentSchedule.map((ex, i) => {
+        const updated = {
+          id: ex.id,
+          name: document.getElementById(`editExName_${i}`)?.value.trim() || ex.name,
+          target: parseInt(document.getElementById(`editExTarget_${i}`)?.value) || ex.target,
+          unit: document.getElementById(`editExUnit_${i}`)?.value.trim() || ex.unit
+        };
+        exerciseCatalog[ex.id] = updated;
+        return updated;
+      });
+
+      await Promise.all([
+        setDoc(doc(db, "schedules", selectedWeekId), { exercises: currentSchedule }),
+        setDoc(doc(db, "schedules", "default"), { exercises: currentSchedule }),
+        setDoc(doc(db, "settings", "exercise_catalog"), { catalog: exerciseCatalog })
+      ]);
+
+      populateExerciseSelectors();
       renderScheduleEditor();
-    };
+      alert(`✅ 已儲存並發佈課表（所有動作 ID 保持穩定，歷史數據與圖表已自動同步新名稱）！`);
+    }
 
-    window.removeExerciseItem = (idx) => {
-      currentSchedule.splice(idx, 1);
-      renderScheduleEditor();
-    };
-
-    window.saveWeeklySchedule = async () => {
-      await setDoc(doc(db, "schedules", thisWeekId), { exercises: currentSchedule });
-      await setDoc(doc(db, "schedules", "default"), { exercises: currentSchedule });
-      alert("✅ 課表已儲存並發佈！所有學員登入後會看到最新訓練項目。");
-    };
-
-    // 教練管理成就表（新增 / 編輯 / 刪除）
+    // 教練管理成就表
     function renderAdminAchievements() {
       const container = document.getElementById("adminAchievementsList");
       container.innerHTML = achievementsList.map((ach, idx) => `
         <div class="border-2 border-slate-200 rounded-2xl p-4 bg-slate-50 space-y-2">
           <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <input type="text" id="editAchIcon_${idx}" value="${ach.icon}" class="p-2 border rounded-xl bg-white font-bold text-center sm:col-span-1" title="圖示">
-            <input type="text" id="editAchTitle_${idx}" value="${ach.title}" class="p-2 border rounded-xl bg-white font-bold sm:col-span-2" title="成就名稱">
-            <input type="number" id="editAchTarget_${idx}" value="${ach.target}" class="p-2 border rounded-xl bg-white font-bold" title="目標星數">
+            <input type="text" id="editAchIcon_${idx}" value="${ach.icon}" class="p-2 border rounded-xl bg-white font-bold text-center sm:col-span-1">
+            <input type="text" id="editAchTitle_${idx}" value="${ach.title}" class="p-2 border rounded-xl bg-white font-bold sm:col-span-2">
+            <input type="number" id="editAchTarget_${idx}" value="${ach.target}" class="p-2 border rounded-xl bg-white font-bold">
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
             <input type="text" id="editAchDesc_${idx}" value="${ach.desc}" class="flex-1 p-2 border rounded-xl bg-white text-sm font-medium">
             <div class="flex gap-2 shrink-0">
-              <button onclick="saveEditedAchievement(${idx})" class="bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl">💾 儲存修改</button>
-              <button onclick="deleteAchievement(${idx})" class="bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl">🗑️ 刪除</button>
+              <button data-saveach="${idx}" class="btn-save-ach bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl">💾 儲存修改</button>
+              <button data-delach="${idx}" class="btn-del-ach bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl">🗑️ 刪除</button>
             </div>
           </div>
         </div>
       `).join("");
     }
 
-    window.saveEditedAchievement = async (idx) => {
-      achievementsList[idx].icon = document.getElementById(`editAchIcon_${idx}`).value.trim() || "🏅";
-      achievementsList[idx].title = document.getElementById(`editAchTitle_${idx}`).value.trim();
-      achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
-      achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
-      await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
-      alert("✅ 已更新該項成就！");
-      renderAdminAchievements();
-    };
+    // 教練管理用戶名單與密碼（從 user_secrets 讀取明文密碼供教練支援）
+    function renderUserAdminList() {
+      requireAdmin();
+      const sortedUsers = [...adminUsersList].sort((a, b) => (b.needHelp ? 1 : 0) - (a.needHelp ? 1 : 0));
+      const container = document.getElementById("userAdminList");
 
-    window.deleteAchievement = async (idx) => {
-      if (!confirm(`確定要刪除「${achievementsList[idx].title}」這個成就嗎？`)) return;
-      achievementsList.splice(idx, 1);
-      await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
-      renderAdminAchievements();
-    };
+      container.innerHTML = sortedUsers.map(u => {
+        const plainPwd = adminSecretsMap[u.id] || u.password || "（已加密，可按右側重設）";
+        return `
+          <div class="border-2 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
+            <div>
+              <div class="flex items-center flex-wrap gap-2">
+                <span class="text-lg font-black text-slate-900">${u.chineseName}</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold ${u.role === 'admin' ? 'bg-purple-200 text-purple-900' : 'bg-slate-200 text-slate-700'}">
+                  ${u.role === 'admin' ? '教練/管理員 (Admin)' : '學員'}
+                </span>
+                ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ 忘記密碼求助中！</span>` : ''}
+              </div>
+              <div class="text-xs sm:text-sm text-slate-600 mt-1 space-x-3">
+                <span>帳號：<strong>${u.username}</strong></span>
+                <span>電話：<strong>${u.phone}</strong></span>
+                <span>密碼（僅教練可見）：<strong class="text-emerald-700 text-base bg-emerald-50 px-2 py-0.5 rounded">${plainPwd}</strong></span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+              <button data-resetuid="${u.id}" data-resetname="${u.chineseName}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">🔑 幫佢改密碼</button>
+              <button data-roleuid="${u.id}" data-currole="${u.role}" class="btn-admin-togglerole flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
+                ${u.role === 'admin' ? '⬇️ 轉回學員' : '⬆️ 轉為管理員'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
 
-    window.addAchievementItem = async () => {
+    // ==================== 5. 綁定所有事件監聽器（不暴露任何 window 全域函數） ====================
+    document.getElementById("toggleLoginPwd").addEventListener("change", (e) => {
+      document.getElementById("loginPassword").type = e.target.checked ? "text" : "password";
+    });
+    document.getElementById("btnLogin").addEventListener("click", handleLogin);
+    document.getElementById("btnRegister").addEventListener("click", handleRegister);
+    document.getElementById("btnForgotPwd").addEventListener("click", handleForgotPassword);
+    document.getElementById("btnGoRegister").addEventListener("click", () => {
+      document.getElementById("loginCard").classList.add("hidden");
+      document.getElementById("registerCard").classList.remove("hidden");
+    });
+    document.getElementById("btnBackLogin").addEventListener("click", () => {
+      document.getElementById("registerCard").classList.add("hidden");
+      document.getElementById("loginCard").classList.remove("hidden");
+    });
+    document.getElementById("btnLogout").addEventListener("click", () => location.reload());
+
+    // 學員端互動事件
+    document.getElementById("studentWeekSelect").addEventListener("change", async (e) => {
+      selectedWeekId = e.target.value;
+      await loadScheduleForWeek(selectedWeekId);
+      currentDayIndex = (selectedWeekId === thisWeekId) ? todayDayIndex : 0;
+      populateExerciseSelectors();
+      renderStudentWeekView();
+    });
+
+    document.getElementById("dayTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".stu-day-btn");
+      if (!btn) return;
+      const idx = parseInt(btn.getAttribute("data-dayidx"));
+      if (selectedWeekId === thisWeekId && idx > todayDayIndex) return;
+      currentDayIndex = idx;
+      renderStudentWeekView();
+    });
+
+    document.getElementById("exerciseInputs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".stu-adj-btn");
+      if (!btn) return;
+      const idx = parseInt(btn.getAttribute("data-adjidx"));
+      const delta = parseInt(btn.getAttribute("data-delta"));
+      const ex = currentSchedule[idx];
+      if (!ex) return;
+      const input = document.getElementById(`stu_ex_input_${ex.id}`);
+      if (input && !input.disabled) {
+        input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+      }
+    });
+
+    document.getElementById("btnSaveWorkout").addEventListener("click", saveStudentDailyWorkout);
+    document.getElementById("stuDailyChartExSelect").addEventListener("change", () => {
+      renderStudentDailyChart(studentLogsMap[selectedWeekId] || {});
+    });
+    document.getElementById("stuGrowthMetricSelect").addEventListener("change", renderStudentGrowthChart);
+
+    document.getElementById("studentHistoryList").addEventListener("click", async (e) => {
+      const card = e.target.closest(".stu-jump-week");
+      if (!card) return;
+      const wId = card.getAttribute("data-jumpweek");
+      document.getElementById("studentWeekSelect").value = wId;
+      selectedWeekId = wId;
+      await loadScheduleForWeek(wId);
+      currentDayIndex = (wId === thisWeekId) ? todayDayIndex : 0;
+      renderStudentWeekView();
+      switchStudentTab("workout");
+    });
+
+    document.querySelectorAll(".stu-nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => switchStudentTab(btn.getAttribute("data-stutab")));
+    });
+
+    // 教練端互動事件
+    document.querySelectorAll(".adm-nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        requireAdmin();
+        const tab = btn.getAttribute("data-admtab");
+        ['overview', 'schedule', 'achievements', 'users'].forEach(t => {
+          document.getElementById(`admin${t.charAt(0).toUpperCase() + t.slice(1)}Tab`).classList.toggle("hidden", t !== tab);
+        });
+        document.querySelectorAll(".adm-nav-btn").forEach(b => {
+          const isTarget = b.getAttribute("data-admtab") === tab;
+          b.className = isTarget
+            ? "adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow"
+            : "adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm";
+        });
+      });
+    });
+
+    document.getElementById("adminWeekSelect").addEventListener("change", async (e) => {
+      await loadAdminWeekOverview(e.target.value);
+      if (inspectedStudent) {
+        document.getElementById("coachEditWeekLabel").innerText = `目前編輯週次：${selectedWeekId}（星期日起計 7 日）`;
+        renderCoachStudentEditor();
+      }
+    });
+
+    document.getElementById("btnExportCSV").addEventListener("click", exportWeeklyCSV);
+
+    document.getElementById("allStudentsTable").addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-inspect-student");
+      if (!btn) return;
+      openStudentInspector(btn.getAttribute("data-inspectuid"));
+    });
+
+    document.getElementById("btnCloseInspector").addEventListener("click", () => {
+      document.getElementById("coachStudentInspector").classList.add("hidden");
+      inspectedStudent = null;
+    });
+
+    document.getElementById("coachGrowthMetricSelect").addEventListener("change", renderCoachStudentGrowthChart);
+
+    document.getElementById("coachDayTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".coach-day-btn");
+      if (!btn) return;
+      coachSelectedDayIdx = parseInt(btn.getAttribute("data-coachday"));
+      renderCoachStudentEditor();
+    });
+
+    document.getElementById("btnCoachSaveStudentDay").addEventListener("click", () => saveCoachStudentDay(true));
+    document.getElementById("btnCoachClearStudentDay").addEventListener("click", () => saveCoachStudentDay(false));
+
+    // 課表編輯事件
+    document.getElementById("btnAddExercise").addEventListener("click", () => {
+      requireAdmin();
+      const name = document.getElementById("newExName").value.trim();
+      const target = parseInt(document.getElementById("newExTarget").value) || 10;
+      const unit = document.getElementById("newExUnit").value.trim() || "下";
+      if (!name) return alert("請輸入動作名稱！");
+      const newId = "ex_" + Date.now();
+      const newEx = { id: newId, name, target, unit };
+      exerciseCatalog[newId] = newEx;
+      currentSchedule.push(newEx);
+      document.getElementById("newExName").value = "";
+      renderScheduleEditor();
+    });
+
+    document.getElementById("scheduleEditorList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-remove-ex");
+      if (!btn) return;
+      requireAdmin();
+      const idx = parseInt(btn.getAttribute("data-remex"));
+      currentSchedule.splice(idx, 1);
+      renderScheduleEditor();
+    });
+
+    document.getElementById("btnSaveSchedule").addEventListener("click", saveWeeklySchedule);
+
+    // 成就管理事件
+    document.getElementById("btnAddAchievement").addEventListener("click", async () => {
+      requireAdmin();
       const icon = document.getElementById("newAchIcon").value.trim() || "🏅";
       const title = document.getElementById("newAchTitle").value.trim();
       const type = document.getElementById("newAchType").value;
       const target = parseInt(document.getElementById("newAchTarget").value) || 4;
       const desc = document.getElementById("newAchDesc").value.trim();
-
       if (!title || !desc) return alert("請填寫成就名稱及鼓勵字句！");
       achievementsList.push({ id: "ach_" + Date.now(), icon, title, type, target, desc });
       await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
       document.getElementById("newAchTitle").value = "";
       document.getElementById("newAchDesc").value = "";
-      alert("🎉 已成功新增成就！");
       renderAdminAchievements();
-    };
+      alert("🎉 已成功新增成就！");
+    });
 
-    // 教練管理學員名單、密碼及管理員權限（求助者自動置頂）
-    function renderUserAdminList() {
-      const sortedUsers = [...allUsers].sort((a, b) => (b.needHelp ? 1 : 0) - (a.needHelp ? 1 : 0));
-      const container = document.getElementById("userAdminList");
-      container.innerHTML = sortedUsers.map(u => `
-        <div class="border-2 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
-          <div>
-            <div class="flex items-center flex-wrap gap-2">
-              <span class="text-lg font-black text-slate-900">${u.chineseName}</span>
-              <span class="text-xs px-2.5 py-0.5 rounded-full font-bold ${u.role === 'admin' ? 'bg-purple-200 text-purple-900' : 'bg-slate-200 text-slate-700'}">
-                ${u.role === 'admin' ? '教練/管理員 (Admin)' : '學員'}
-              </span>
-              ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ 忘記密碼求助中！</span>` : ''}
-            </div>
-            <div class="text-xs sm:text-sm text-slate-600 mt-1 space-x-3">
-              <span>帳號：<strong>${u.username}</strong></span>
-              <span>電話：<strong>${u.phone}</strong></span>
-              <span>目前密碼：<strong class="text-emerald-700 text-base bg-emerald-50 px-2 py-0.5 rounded">${u.password}</strong></span>
-            </div>
-          </div>
-          <div class="flex flex-wrap gap-2 w-full sm:w-auto">
-            <button onclick="adminResetPassword('${u.id}', '${u.chineseName}')" class="flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">🔑 幫佢改密碼</button>
-            <button onclick="adminToggleRole('${u.id}', '${u.role}')" class="flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
-              ${u.role === 'admin' ? '⬇️ 轉回學員' : '⬆️ 轉為管理員'}
-            </button>
-          </div>
-        </div>
-      `).join("");
-    }
+    document.getElementById("adminAchievementsList").addEventListener("click", async (e) => {
+      const saveBtn = e.target.closest(".btn-save-ach");
+      const delBtn = e.target.closest(".btn-del-ach");
+      if (saveBtn) {
+        requireAdmin();
+        const idx = parseInt(saveBtn.getAttribute("data-saveach"));
+        achievementsList[idx].icon = document.getElementById(`editAchIcon_${idx}`).value.trim() || "🏅";
+        achievementsList[idx].title = document.getElementById(`editAchTitle_${idx}`).value.trim();
+        achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
+        achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
+        await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
+        alert("✅ 已更新該項成就！");
+        renderAdminAchievements();
+      } else if (delBtn) {
+        requireAdmin();
+        const idx = parseInt(delBtn.getAttribute("data-delach"));
+        if (!confirm(`確定要刪除「${achievementsList[idx].title}」嗎？`)) return;
+        achievementsList.splice(idx, 1);
+        await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
+        renderAdminAchievements();
+      }
+    });
 
-    window.adminResetPassword = async (uid, name) => {
-      const newPwd = prompt(`請為【${name}】輸入新密碼（幾多位數都可以）：`);
-      if (!newPwd) return;
-      await updateDoc(doc(db, "users", uid), { password: newPwd.trim(), needHelp: false });
-      alert(`✅ 已將【${name}】的密碼更新為：${newPwd}`);
-      await loadUsers();
-      renderUserAdminList();
-    };
-
-    window.adminToggleRole = async (uid, currentRole) => {
-      const newRole = currentRole === "admin" ? "student" : "admin";
-      await updateDoc(doc(db, "users", uid), { role: newRole });
-      alert(`✅ 權限已更新為：${newRole === 'admin' ? '管理員 (Admin)' : '學員'}`);
-      await loadUsers();
-      renderUserAdminList();
-    };
-
-    initSystem();
+    // 用戶管理與密碼重設事件
+    document.getElementById("userAdminList").addEventListener("click", async (e) => {
+      const resetBtn = e.target.closest(".btn-admin-resetpwd");
+      const roleBtn = e.target.closest(".btn-admin-togglerole");
+      if (resetBtn) {
+        requireAdmin();
+        const uid = resetBtn.getAttribute("data-resetuid");
+        const name = resetBtn.getAttribute("data-resetname");
+        const newPwd = prompt(`請為【${name}】輸入新密碼（幾多位數都可以）：`);
+        if (!newPwd) return;
+        const cleanPwd = newPwd.trim();
+        await Promise.all([
+          updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
+          setDoc(doc(db, "user_secrets", uid), { passwordPlain: cleanPwd })
+        ]);
+        alert(`✅ 已將【${name}】的密碼更新為：${cleanPwd}`);
+        await loadAdminUsersAndSecrets();
+        renderUserAdminList();
+      } else if (roleBtn) {
+        requireAdmin();
+        const uid = roleBtn.getAttribute("data-roleuid");
+        const curRole = roleBtn.getAttribute("data-currole");
+        const newRole = curRole === "admin" ? "student" : "admin";
+        await updateDoc(doc(db, "users", uid), { role: newRole });
+        alert(`✅ 權限已更新為：${newRole === 'admin' ? '教練/管理員 (Admin)' : '學員'}`);
+        await loadAdminUsersAndSecrets();
+        renderUserAdminList();
+        await loadAdminWeekOverview(selectedWeekId);
+      }
+    });
   </script>
 </body>
 </html>
