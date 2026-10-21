@@ -10,76 +10,110 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
       font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "PingFang HK", "PingFang TC", "Microsoft JhengHei", sans-serif;
       -webkit-tap-highlight-color: transparent;
       background-color: #f1f5f9;
     }
+    /* 防止 iOS Safari 點擊輸入框時自動放大畫面 */
     input, select, textarea {
       font-size: 16px !important;
     }
+    /* 優化數字輸入框在細屏幕的外觀 */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      opacity: 1;
+    }
+    .safe-bottom {
+      padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+    }
   </style>
 </head>
-<body class="min-h-screen text-slate-800 pb-28">
+<body class="min-h-screen text-slate-800 safe-bottom">
+
+  <!-- 全域載入與重試遮罩（解決網絡波動或登入拉取數據卡住問題） -->
+  <div id="globalLoadingOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-xs w-full text-center shadow-2xl border-2 border-emerald-400">
+      <div class="text-4xl animate-bounce mb-2">⚽</div>
+      <p id="loadingStatusText" class="font-black text-slate-800 text-base">正在連線同步資料...</p>
+      <p class="text-xs text-slate-500 mt-1">請稍候，系統正自動為你載入最新紀錄</p>
+    </div>
+  </div>
 
   <!-- 頂部導航列 -->
-  <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-4 py-3.5 shadow-lg sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto flex justify-between items-center">
-      <div class="flex items-center gap-2.5">
-        <span class="text-2xl">⚽</span>
-        <div>
-          <h1 class="text-lg sm:text-xl font-black tracking-wide leading-tight">足球隊體能打卡站</h1>
-          <p class="text-xs text-emerald-100 font-medium">目標起碼四日做體能 💪🏻 保持最佳狀態</p>
+  <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-3 sm:px-5 py-3 shadow-lg sticky top-0 z-30">
+    <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-2xl shrink-0">⚽</span>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-xl font-black tracking-wide leading-tight truncate">足球隊體能打卡站</h1>
+          <p class="text-[11px] sm:text-xs text-emerald-100 font-medium truncate">目標起碼四日做體能 💪🏻 保持最佳狀態</p>
         </div>
       </div>
-      <div id="userHeader" class="hidden flex items-center gap-2">
-        <span id="currentUserBadge" class="bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full text-xs sm:text-sm font-bold"></span>
-        <button id="btnLogout" class="bg-rose-500 hover:bg-rose-600 active:scale-95 transition px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold shadow">登出</button>
+      <div id="userHeader" class="hidden flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button id="btnManualSync" title="重新同步最新資料" class="bg-white/20 hover:bg-white/30 active:scale-95 transition px-2.5 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1">
+          <span>🔄</span><span class="hidden sm:inline">同步</span>
+        </button>
+        <span id="currentUserBadge" class="bg-white/20 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-bold max-w-[110px] sm:max-w-[180px] truncate"></span>
+        <button id="btnLogout" class="bg-rose-500 hover:bg-rose-600 active:scale-95 transition px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold shadow shrink-0">登出</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto p-3 sm:p-5">
+  <!-- 系統提示 Toast -->
+  <div id="toastBanner" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 hidden max-w-[92vw] w-max bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl border-2 border-emerald-400 text-sm font-black text-center transition-all"></div>
+
+  <main class="max-w-4xl mx-auto p-2.5 sm:p-5">
 
     <!-- ==================== 1. 登入與註冊畫面 ==================== -->
     <section id="authSection" class="mt-2 max-w-xl mx-auto">
-      <div class="bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 border-2 border-amber-300 rounded-3xl p-4 mb-5 text-center shadow-sm">
-        <p class="text-amber-900 font-black text-base sm:text-lg">🌟 每日一粒星 🌟 目標起碼四日做體能！</p>
-        <p class="text-emerald-800 font-bold text-sm mt-1">大家繼續努力 保持最佳狀態 💪🏻💪🏼</p>
+      <div class="bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 border-2 border-amber-300 rounded-3xl p-4 mb-4 text-center shadow-sm">
+        <p class="text-amber-900 font-black text-sm sm:text-lg">🌟 每日一粒星 🌟 目標起碼四日做體能！</p>
+        <p class="text-emerald-800 font-bold text-xs sm:text-sm mt-1">大家繼續努力 保持最佳狀態 💪🏻💪🏼</p>
       </div>
 
       <!-- 登入卡片 -->
-      <div id="loginCard" class="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
-        <h2 class="text-2xl font-black text-slate-800 text-center mb-1">👋🏻 學員／教練登入</h2>
-        <p class="text-center text-slate-500 text-sm mb-6">請輸入你的「電話號碼」或「帳號名稱」登入</p>
+      <div id="loginCard" class="bg-white rounded-3xl shadow-xl p-4 sm:p-6 border border-slate-100">
+        <h2 class="text-xl sm:text-2xl font-black text-slate-800 text-center mb-1">👋🏻 學員／教練登入</h2>
+        <p class="text-center text-slate-500 text-xs sm:text-sm mb-5">登入後會自動記住帳號，下次打開免重複登入</p>
 
         <div class="space-y-4">
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1.5">📱 電話號碼 或 帳號名稱</label>
-            <input type="text" id="loginIdentifier" placeholder="例如：91234567 或 ming01" 
+            <input type="text" id="loginIdentifier" placeholder="例如：91234567 或 ming01" autocomplete="username"
               class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:bg-white focus:outline-none transition font-bold text-slate-800">
           </div>
 
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1.5">🔑 密碼（不限位數）</label>
-            <input type="password" id="loginPassword" placeholder="請輸入你的密碼" 
+            <input type="password" id="loginPassword" placeholder="請輸入你的密碼" autocomplete="current-password"
               class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-emerald-500 focus:bg-white focus:outline-none transition font-bold text-slate-800">
-            <label class="inline-flex items-center mt-2 text-xs text-slate-500 cursor-pointer select-none">
-              <input type="checkbox" id="toggleLoginPwd" class="mr-1.5 rounded"> 顯示密碼文字
-            </label>
+            <div class="flex justify-between items-center mt-2">
+              <label class="inline-flex items-center text-xs text-slate-600 font-bold cursor-pointer select-none">
+                <input type="checkbox" id="toggleLoginPwd" class="mr-1.5 rounded w-4 h-4"> 顯示密碼文字
+              </label>
+              <span class="text-[11px] text-emerald-700 font-bold">✅ 系統已啟用自動保持登入</span>
+            </div>
           </div>
 
-          <p id="loginErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-sm font-bold text-center"></p>
+          <p id="loginErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-xs sm:text-sm font-bold text-center"></p>
 
-          <button id="btnLogin" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition">
+          <button id="btnLogin" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-lg sm:text-xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition">
             ✅ 登入系統
           </button>
 
           <div class="flex flex-col sm:flex-row gap-2 pt-2">
-            <button id="btnForgotPwd" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-4 rounded-2xl text-sm transition">
+            <button id="btnForgotPwd" class="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
               😢 忘記密碼？通知教練幫手
             </button>
-            <button id="btnGoRegister" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-4 rounded-2xl text-sm transition">
+            <button id="btnGoRegister" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
               ➕ 新隊員註冊帳號
             </button>
           </div>
@@ -87,217 +121,250 @@
       </div>
 
       <!-- 註冊卡片 -->
-      <div id="registerCard" class="hidden bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-2xl font-black text-blue-900">📝 新隊員註冊</h2>
-          <button id="btnBackLogin" class="text-sm font-bold text-slate-500 hover:text-slate-800 bg-slate-100 px-3 py-1.5 rounded-xl">⬅️ 返回登入</button>
+      <div id="registerCard" class="hidden bg-white rounded-3xl shadow-xl p-4 sm:p-6 border border-slate-100">
+        <div class="flex justify-between items-center mb-4 gap-2">
+          <h2 class="text-xl sm:text-2xl font-black text-blue-900">📝 新隊員註冊</h2>
+          <button id="btnBackLogin" class="text-xs sm:text-sm font-bold text-slate-600 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-xl shrink-0">⬅️ 返回登入</button>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-3.5">
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">1. 你的中文姓名 <span class="text-rose-500">*</span></label>
-            <input type="text" id="regChineseName" placeholder="例如：陳大明" class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
+            <input type="text" id="regChineseName" placeholder="例如：陳大明" class="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">2. 設定帳號名稱（不可與人重複） <span class="text-rose-500">*</span></label>
-            <input type="text" id="regUsername" placeholder="例如：ming10（英文或數字）" class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
+            <input type="text" id="regUsername" placeholder="例如：ming10（英文或數字）" class="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">3. 手提電話號碼（可用作登入，不可重複） <span class="text-rose-500">*</span></label>
-            <input type="tel" id="regPhone" placeholder="例如：91234567" class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
+            <input type="tel" id="regPhone" placeholder="例如：91234567" class="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
           <div>
             <label class="block text-sm font-bold text-slate-700 mb-1">4. 設定密碼（幾多位數都可以，最緊要易記） <span class="text-rose-500">*</span></label>
-            <input type="text" id="regPassword" placeholder="例如：球衣號碼 7 或 生日 0512" class="w-full p-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
+            <input type="text" id="regPassword" placeholder="例如：球衣號碼 7 或 生日 0512" class="w-full p-3 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 focus:bg-white focus:outline-none font-bold">
           </div>
 
           <div class="pt-2 border-t border-slate-100">
-            <label class="block text-xs text-slate-400 mb-1">（選填）職員授權碼（學員請留空）：</label>
-            <input type="password" id="regCoachCode" placeholder="一般學員請留空" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+            <label class="block text-xs text-slate-400 mb-1">（選填）教練授權碼（學員請留空）：</label>
+            <input type="password" id="regCoachCode" placeholder="學員請留空" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
           </div>
 
-          <p id="regErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-sm font-bold text-center"></p>
+          <p id="regErrorMsg" class="hidden text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl text-xs sm:text-sm font-bold text-center"></p>
 
-          <button id="btnRegister" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xl font-black py-4 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition">
-            🎉 完成註冊並登入
+          <button id="btnRegister" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg sm:text-xl font-black py-4 rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition">
+            🎉 完成註冊並自動登入
           </button>
         </div>
       </div>
     </section>
 
     <!-- ==================== 2. 學員專區畫面 ==================== -->
-    <section id="studentSection" class="hidden space-y-5 mt-2">
+    <section id="studentSection" class="hidden space-y-4 mt-1">
 
       <!-- 週次切換器 -->
-      <div class="bg-white rounded-2xl shadow-sm p-3 border border-slate-200 flex items-center justify-between gap-2">
-        <span class="text-sm font-extrabold text-slate-700 pl-2">📅 查看週次：</span>
-        <select id="studentWeekSelect" class="flex-1 max-w-xs bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm focus:outline-none">
-        </select>
+      <div class="bg-white rounded-2xl shadow-sm p-2.5 sm:p-3 border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs sm:text-sm font-extrabold text-slate-700 pl-1">📅 選擇查看週次：</span>
+          <button id="btnJumpThisWeek" class="sm:hidden text-xs bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-lg">返回本週</button>
+        </div>
+        <div class="flex items-center gap-2 flex-1 sm:max-w-md">
+          <select id="studentWeekSelect" class="w-full bg-emerald-50 border-2 border-emerald-300 text-emerald-950 font-bold rounded-xl p-2 text-xs sm:text-sm focus:outline-none">
+          </select>
+          <button id="btnJumpThisWeekDesktop" class="hidden sm:inline-block shrink-0 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-black px-3 py-2.5 rounded-xl shadow-sm transition">返回本週</button>
+        </div>
       </div>
 
       <!-- 星星與獎章鼓勵看板 -->
-      <div class="bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-200 border-4 border-amber-400 rounded-3xl p-5 text-center shadow-md">
-        <p id="weekLabelStudent" class="text-xs sm:text-sm font-extrabold text-amber-800 bg-amber-300/50 px-3 py-1 rounded-full inline-block mb-2"></p>
-        <div id="starDisplay" class="text-3xl sm:text-4xl my-2 tracking-widest drop-shadow-sm"></div>
-        <h2 id="badgeTitle" class="text-xl sm:text-2xl font-black text-amber-950 my-2 leading-snug"></h2>
-        <div class="bg-white/90 backdrop-blur-sm py-2.5 px-4 rounded-2xl inline-block mt-1 shadow-sm border border-amber-200">
-          <p class="text-sm sm:text-base font-black text-emerald-800">
+      <div class="bg-gradient-to-br from-amber-100 via-yellow-100 to-amber-200 border-4 border-amber-400 rounded-3xl p-4 sm:p-5 text-center shadow-md">
+        <p id="weekLabelStudent" class="text-xs sm:text-sm font-extrabold text-amber-900 bg-amber-300/60 px-3 py-1 rounded-full inline-block mb-1.5"></p>
+        <div id="starDisplay" class="text-2xl sm:text-4xl my-1.5 tracking-widest drop-shadow-sm"></div>
+        <h2 id="badgeTitle" class="text-lg sm:text-2xl font-black text-amber-950 my-1.5 leading-snug"></h2>
+        <div class="bg-white/90 backdrop-blur-sm py-2 px-3 sm:px-4 rounded-2xl inline-block mt-1 shadow-sm border border-amber-200">
+          <p class="text-xs sm:text-base font-black text-emerald-800">
             目標起碼四日做體能！大家繼續努力 保持最佳狀態 💪🏻💪🏼
           </p>
         </div>
       </div>
 
       <!-- 學員子分頁 1：每週打卡與單項每日圖表 -->
-      <div id="stuTabWorkout" class="space-y-5">
-        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-6 border border-slate-100">
-          <div class="flex flex-col sm:flex-row justify-between items-center mb-3 gap-2">
-            <h3 class="text-base sm:text-lg font-black text-slate-800">👇 點選星期幾輸入或修改紀錄（星期日起計）</h3>
-            <span id="stuEditStatusBadge" class="text-xs font-extrabold px-3 py-1 rounded-full"></span>
+      <div id="stuTabWorkout" class="space-y-4">
+        <div class="bg-white rounded-3xl shadow-md p-3.5 sm:p-6 border border-slate-100">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-1.5">
+            <h3 class="text-sm sm:text-lg font-black text-slate-800">👇 點選日子輸入或修改紀錄（顯示 日/月）</h3>
+            <span id="stuEditStatusBadge" class="text-xs font-extrabold px-2.5 py-1 rounded-full"></span>
           </div>
           
-          <!-- 星期日至星期六按鈕列 -->
-          <div id="dayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-5"></div>
+          <!-- 星期日至星期六 7 日按鈕列（包含真實 日/月 與 今日 標籤，細屏幕自動縮減邊距） -->
+          <div id="dayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-4"></div>
 
           <!-- 當日訓練動作列表 -->
-          <div id="exerciseInputs" class="space-y-3 my-4"></div>
+          <div id="exerciseInputs" class="space-y-3 my-3"></div>
 
-          <button id="btnSaveWorkout" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl sm:text-2xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2">
+          <button id="btnSaveWorkout" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-base sm:text-2xl font-black py-3.5 sm:py-4 px-3 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2">
             🌟 儲存／更新當日紀錄（完成拎一粒星！）🌟
           </button>
         </div>
 
-        <!-- 該週每日單項動作圖表（按各自單位顯示 Y 軸） -->
-        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <!-- 該週每日單項動作圖表 -->
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+          <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3">
             <div>
-              <h3 class="text-lg font-black text-slate-800">📊 該週每日單項動作表現圖</h3>
-              <p class="text-xs text-slate-500">紅色虛線為教練建議目標，Y 軸為該動作專屬單位</p>
+              <h3 class="text-base sm:text-lg font-black text-slate-800">📊 該週每日動作表現圖</h3>
+              <p class="text-xs text-slate-500">紅色虛線為教練建議目標，看看自己哪一天最落力！</p>
             </div>
-            <select id="stuDailyChartExSelect" class="bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-sm"></select>
+            <select id="stuDailyChartExSelect" class="bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-xs sm:text-sm"></select>
           </div>
-          <canvas id="studentDailyChart" height="190"></canvas>
+          <div class="relative w-full h-56 sm:h-64">
+            <canvas id="studentDailyChart"></canvas>
+          </div>
         </div>
       </div>
 
       <!-- 學員子分頁 2：個人進步成長曲線 & 歷週紀錄簿 -->
-      <div id="stuTabHistory" class="hidden space-y-5">
-        <!-- 個人進步成長曲線圖 -->
-        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+      <div id="stuTabHistory" class="hidden space-y-4">
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+          <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3">
             <div>
-              <h3 class="text-xl font-black text-slate-800">📈 我的進步成長曲線</h3>
+              <h3 class="text-lg sm:text-xl font-black text-slate-800">📈 我的進步成長曲線</h3>
               <p class="text-xs text-slate-500">追蹤自己每星期的星數與體能動作進步幅度 💪🏻</p>
             </div>
-            <select id="stuGrowthMetricSelect" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-sm"></select>
+            <select id="stuGrowthMetricSelect" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-xs sm:text-sm"></select>
           </div>
-          <canvas id="studentGrowthChart" height="200"></canvas>
+          <div class="relative w-full h-56 sm:h-64">
+            <canvas id="studentGrowthChart"></canvas>
+          </div>
         </div>
 
         <!-- 歷週紀錄列表 -->
-        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <h3 class="text-xl font-black text-slate-800 mb-1">📜 我的歷週體能紀錄簿</h3>
-          <p class="text-xs text-slate-500 mb-4">點擊任何一週即可跳轉查看當週詳細打卡數目（歷史週次只供查閱，如需更正請搵教練幫手）</p>
-          <div id="studentHistoryList" class="space-y-3"></div>
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+          <h3 class="text-lg sm:text-xl font-black text-slate-800 mb-1">📜 我的歷週體能紀錄簿</h3>
+          <p class="text-xs text-slate-500 mb-3">點擊任何一週即可查看當週詳細打卡數目與獲得過的每週成就獎章</p>
+          <div id="studentHistoryList" class="space-y-2.5"></div>
         </div>
       </div>
 
-      <!-- 學員子分頁 3：成就獎章牆 -->
+      <!-- 學員子分頁 3：成就獎章牆（清晰分為：每週成就表 ＆ 歷史永久成就表 ＆ 過往每週成就紀錄） -->
       <div id="stuTabAchievements" class="hidden space-y-4">
-        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <div class="text-center mb-5">
-            <h3 class="text-2xl font-black text-slate-800">🏅 我的體能成就獎章牆</h3>
-            <p class="text-sm text-slate-500 mt-1">完成訓練目標即可自動點亮獎章！繼續突破自己 💪🏻</p>
+        
+        <!-- A. 每週成就表（每星期日刷新，並可切換查看過往每週獲得的成就） -->
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border-2 border-amber-300">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 border-b border-amber-100 pb-3">
+            <div>
+              <span class="text-[11px] font-black bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full">🔄 每逢星期日刷新重置</span>
+              <h3 class="text-lg sm:text-2xl font-black text-slate-800 mt-1">🌟 每週成就表（單週挑戰）</h3>
+              <p class="text-xs text-slate-500">每星期重新計算！可切換右上角週次，查看自己過往每週拿過的獎章</p>
+            </div>
+            <select id="achWeekFilterSelect" class="w-full sm:w-auto bg-amber-50 border-2 border-amber-400 text-amber-950 font-black rounded-xl p-2 text-xs sm:text-sm"></select>
           </div>
-          <div id="studentAchievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
+          <div id="weeklyAchievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
         </div>
+
+        <!-- B. 歷史成就表（永久累積，絕不刷新） -->
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border-2 border-indigo-200">
+          <div class="mb-4 border-b border-indigo-100 pb-3">
+            <span class="text-[11px] font-black bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">♾️ 永久保留・絕不刷新</span>
+            <h3 class="text-lg sm:text-2xl font-black text-slate-800 mt-1">🏆 歷史累積成就表（生涯榮譽）</h3>
+            <p class="text-xs text-slate-500">只要你堅持訓練，每一粒星都會永久累積，解鎖屬於你的終身榮譽！</p>
+          </div>
+          <div id="historicalAchievementsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+        </div>
+
+        <!-- C. 過往每週成就榮譽榜（讓學員一眼回顧自己歷週拿過的獎章） -->
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-200">
+          <h3 class="text-base sm:text-xl font-black text-slate-800 mb-1">🗓️ 我的歷週成就榮譽紀錄</h3>
+          <p class="text-xs text-slate-500 mb-3">回顧你每一個星期努力贏返嚟嘅每週獎章！點擊可查看該週詳情</p>
+          <div id="pastWeeklyBadgesTimeline" class="space-y-2.5"></div>
+        </div>
+
       </div>
 
-      <!-- 手機底部懸浮導航列（學員專用） -->
-      <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl z-40 px-4 py-2">
-        <div class="max-w-md mx-auto grid grid-cols-3 gap-2">
+      <!-- 手機與電腦底部懸浮導航列（學員專用） -->
+      <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-2xl z-40 px-2 sm:px-4 py-1.5">
+        <div class="max-w-md mx-auto grid grid-cols-3 gap-1.5">
           <button data-stutab="workout" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl bg-emerald-100 text-emerald-800 font-black text-xs transition">
-            <span class="text-xl mb-0.5">🏋🏻</span>
+            <span class="text-lg sm:text-xl">🏋🏻</span>
             <span>訓練打卡</span>
           </button>
           <button data-stutab="history" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
-            <span class="text-xl mb-0.5">📈</span>
-            <span>成長曲線與歷史</span>
+            <span class="text-lg sm:text-xl">📈</span>
+            <span>成長與歷史</span>
           </button>
           <button data-stutab="achievements" class="stu-nav-btn flex flex-col items-center py-1.5 rounded-2xl text-slate-500 font-bold text-xs transition">
-            <span class="text-xl mb-0.5">🏅</span>
-            <span>成就獎章</span>
+            <span class="text-lg sm:text-xl">🏅</span>
+            <span>每週/歷史成就</span>
           </button>
         </div>
       </nav>
     </section>
 
     <!-- ==================== 3. 管理員（教練）後台畫面 ==================== -->
-    <section id="adminSection" class="hidden space-y-5 mt-2">
+    <section id="adminSection" class="hidden space-y-4 mt-1">
       <!-- 教練功能切換選單 -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white p-2.5 rounded-2xl shadow-sm border border-slate-200">
-        <button data-admtab="overview" class="adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow">🏆 全隊紀錄與代改</button>
-        <button data-admtab="schedule" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">📝 編輯課表</button>
-        <button data-admtab="achievements" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">🏅 編輯成就表</button>
-        <button data-admtab="users" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm">👥 帳號與密碼管理</button>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+        <button data-admtab="overview" class="adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-2 rounded-xl text-xs sm:text-sm shadow">🏆 全隊紀錄與代改</button>
+        <button data-admtab="schedule" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm">📝 編輯課表</button>
+        <button data-admtab="achievements" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm">🏅 編輯成就表</button>
+        <button data-admtab="users" class="adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm">👥 帳號與密碼管理</button>
       </div>
 
       <!-- Admin 分頁 1：全體學員紀錄總覽 ＋ 匯出 CSV ＋ 點擊查看學員成長曲線/修改紀錄 -->
-      <div id="adminOverviewTab" class="space-y-5">
-        <div class="bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+      <div id="adminOverviewTab" class="space-y-4">
+        <div class="bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+          <div class="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 mb-4">
             <div>
-              <h2 class="text-xl font-black text-slate-800">🏆 全隊學員體能表現總覽（只列學員）</h2>
-              <p class="text-xs text-slate-500">點擊學員右側「📈 成長曲線／修改紀錄」即可查看其個人圖表或幫他更正打卡數目</p>
+              <h2 class="text-lg sm:text-xl font-black text-slate-800">🏆 全隊學員體能表現總覽</h2>
+              <p class="text-xs text-slate-500">點擊學員右側按鈕即可查看其個人成長曲線、歷週成就或幫他更正打卡數目</p>
             </div>
-            <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
-              <select id="adminWeekSelect" class="flex-1 md:flex-initial bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2.5 text-sm"></select>
-              <button id="btnExportCSV" class="bg-teal-600 hover:bg-teal-700 text-white font-black px-4 py-2.5 rounded-xl text-sm shadow flex items-center gap-1.5">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <select id="adminWeekSelect" class="bg-emerald-50 border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2.5 text-xs sm:text-sm"></select>
+              <button id="btnExportCSV" class="bg-teal-600 hover:bg-teal-700 text-white font-black px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow flex items-center justify-center gap-1.5 shrink-0">
                 📥 匯出該週 CSV
               </button>
             </div>
           </div>
-          <div id="allStudentsTable" class="space-y-3"></div>
+          <div id="allStudentsTable" class="space-y-2.5"></div>
         </div>
 
         <!-- 教練專用：檢視指定學員成長曲線 & 代為編輯紀錄面板 -->
-        <div id="coachStudentInspector" class="hidden bg-white rounded-3xl shadow-xl p-5 border-4 border-emerald-500 space-y-5">
-          <div class="flex justify-between items-center border-b pb-3">
-            <div>
-              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">教練專屬檢視與代改模式</span>
-              <h3 id="inspectorTitle" class="text-2xl font-black text-slate-900 mt-1"></h3>
+        <div id="coachStudentInspector" class="hidden bg-white rounded-3xl shadow-xl p-4 sm:p-5 border-4 border-emerald-500 space-y-4">
+          <div class="flex justify-between items-start sm:items-center border-b pb-3 gap-2">
+            <div class="min-w-0">
+              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">教練專屬檢視與代改模式</span>
+              <h3 id="inspectorTitle" class="text-lg sm:text-2xl font-black text-slate-900 mt-1"></h3>
             </div>
-            <button id="btnCloseInspector" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-4 py-2 rounded-xl text-sm">✖ 關閉面板</button>
+            <button id="btnCloseInspector" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-black px-3 py-2 rounded-xl text-xs sm:text-sm shrink-0">✖ 關閉</button>
           </div>
 
           <!-- 該學員的進步成長曲線圖 -->
-          <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
-              <h4 class="font-black text-slate-800 text-base">📈 該學員歷週進步成長曲線</h4>
+          <div class="bg-slate-50 rounded-2xl p-3.5 sm:p-4 border border-slate-200">
+            <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2 mb-3">
+              <h4 class="font-black text-slate-800 text-sm sm:text-base">📈 該學員歷週進步成長曲線</h4>
               <select id="coachGrowthMetricSelect" class="bg-white border-2 border-emerald-300 text-emerald-900 font-bold rounded-xl p-2 text-xs sm:text-sm"></select>
             </div>
-            <canvas id="coachStudentGrowthChart" height="180"></canvas>
+            <div class="relative w-full h-52 sm:h-60">
+              <canvas id="coachStudentGrowthChart"></canvas>
+            </div>
           </div>
 
           <!-- 教練代改該學員當週每日打卡紀錄 -->
-          <div class="bg-amber-50/70 rounded-2xl p-4 border-2 border-amber-200">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
-              <div>
-                <h4 class="font-black text-amber-950 text-base">✏️ 代為查看／更正學員每日紀錄</h4>
-                <p id="coachEditWeekLabel" class="text-xs text-amber-800 font-bold"></p>
-              </div>
+          <div class="bg-amber-50/70 rounded-2xl p-3.5 sm:p-4 border-2 border-amber-200">
+            <div class="mb-3">
+              <h4 class="font-black text-amber-950 text-sm sm:text-base">✏️ 代為查看／更正學員每日紀錄（顯示 日/月）</h4>
+              <p id="coachEditWeekLabel" class="text-xs text-amber-800 font-bold mt-0.5"></p>
             </div>
 
             <div id="coachDayTabs" class="grid grid-cols-7 gap-1 sm:gap-2 mb-4"></div>
             <div id="coachExerciseInputs" class="space-y-2.5 mb-4"></div>
 
             <div class="flex flex-col sm:flex-row gap-2">
-              <button id="btnCoachSaveStudentDay" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 px-4 rounded-xl shadow">
+              <button id="btnCoachSaveStudentDay" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 px-4 rounded-xl shadow text-sm sm:text-base">
                 💾 儲存更正並標記當日完成（🌟 1粒星）
               </button>
-              <button id="btnCoachClearStudentDay" class="bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-3 px-4 rounded-xl">
+              <button id="btnCoachClearStudentDay" class="bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-3 px-4 rounded-xl text-sm sm:text-base">
                 🗑️ 取消當日完成狀態（歸零星數）
               </button>
             </div>
@@ -305,14 +372,14 @@
         </div>
       </div>
 
-      <!-- Admin 分頁 2：編輯每週課表（固定運動 ID 機制） -->
-      <div id="adminScheduleTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-        <h2 class="text-xl font-black mb-1 text-slate-800">📝 編輯本週體能訓練課表（支援穩定 ID 改名）</h2>
+      <!-- Admin 分頁 2：編輯每週課表 -->
+      <div id="adminScheduleTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+        <h2 class="text-lg sm:text-xl font-black mb-1 text-slate-800">📝 編輯本週體能訓練課表</h2>
         <p class="text-xs text-slate-500 mb-4">直接修改現有動作的名稱、目標或單位不會影響固定 ID，所有舊紀錄及成長曲線均會完美保留！</p>
         
         <div id="scheduleEditorList" class="space-y-3 mb-5"></div>
         
-        <div class="bg-blue-50 p-4 rounded-2xl border border-blue-200 mb-4">
+        <div class="bg-blue-50 p-3.5 sm:p-4 rounded-2xl border border-blue-200 mb-4">
           <h4 class="font-bold text-blue-900 text-sm mb-2">➕ 新增訓練動作項目</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <input type="text" id="newExName" placeholder="動作名稱（如：深蹲 🦵🏻）" class="p-2.5 border rounded-xl bg-white font-bold">
@@ -323,15 +390,15 @@
             </div>
           </div>
         </div>
-        <button id="btnSaveSchedule" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-black py-3.5 rounded-2xl shadow-lg">
+        <button id="btnSaveSchedule" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-base sm:text-lg font-black py-3.5 rounded-2xl shadow-lg">
           💾 儲存並發佈本週課表
         </button>
       </div>
 
-      <!-- Admin 分頁 3：管理成就表 -->
-      <div id="adminAchievementsTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-        <h2 class="text-xl font-black mb-1 text-slate-800">🏅 編輯成就表（新增／修改／刪除）</h2>
-        <p class="text-xs text-slate-500 mb-4">你可自由調整每個成就的名稱、圖示、鼓勵字句及達標條件</p>
+      <!-- Admin 分頁 3：管理成就表（支援分類：每週成就 vs 歷史永久成就） -->
+      <div id="adminAchievementsTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+        <h2 class="text-lg sm:text-xl font-black mb-1 text-slate-800">🏅 編輯成就表（每週成就 ＆ 歷史累積成就）</h2>
+        <p class="text-xs text-slate-500 mb-4">你可以自由調整「每週成就（每週刷新）」或「歷史成就（永久累積不刷新）」的名稱、圖示與目標星數。</p>
 
         <div id="adminAchievementsList" class="space-y-3 mb-6"></div>
 
@@ -347,10 +414,10 @@
               <input type="text" id="newAchTitle" placeholder="例如：體能超人" class="w-full p-2.5 border rounded-xl bg-white font-bold">
             </div>
             <div>
-              <label class="text-xs font-bold text-slate-600">解鎖條件類型</label>
+              <label class="text-xs font-bold text-slate-600">成就表分類（每週刷新 vs 永久累積）</label>
               <select id="newAchType" class="w-full p-2.5 border rounded-xl bg-white font-bold">
-                <option value="weekly_stars">單週獲得星數（每週最多7粒）</option>
-                <option value="total_stars">歷史累積總星數</option>
+                <option value="weekly_stars">🔄 每週成就表（單週獲得星數，每週刷新）</option>
+                <option value="total_stars">♾️ 歷史成就表（歷史累積總星數，絕不刷新）</option>
               </select>
             </div>
             <div>
@@ -369,24 +436,22 @@
       </div>
 
       <!-- Admin 分頁 4：學員名單、忘記密碼重設 及 轉為管理員 -->
-      <div id="adminUsersTab" class="hidden bg-white rounded-3xl shadow-md p-5 border border-slate-100">
-        <h2 class="text-xl font-black mb-1 text-slate-800">👥 隊員帳號、忘記密碼支援 及 權限升級</h2>
-        <p class="text-xs text-slate-500 mb-4">學員密碼已加密保護並與公開資料分離，只有管理員在此後台可見。求助學員會自動置頂亮起紅燈。</p>
+      <div id="adminUsersTab" class="hidden bg-white rounded-3xl shadow-md p-4 sm:p-5 border border-slate-100">
+        <h2 class="text-lg sm:text-xl font-black mb-1 text-slate-800">👥 隊員帳號、忘記密碼支援 及 權限管理</h2>
+        <p class="text-xs text-slate-500 mb-4">忘記密碼求助的學員會自動置頂並亮起紅燈，教練可一鍵幫他們重設簡單易記的密碼。</p>
         <div id="userAdminList" class="space-y-3"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- Firebase SDK 與系統核心邏輯（封裝於 ES Module 閉包內，防止 Console 竄改） -->
+  <!-- Firebase SDK 與系統核心邏輯 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
     import { 
-      getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where 
+      initializeFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where 
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // 已預載你的 sen-football-fitness Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyC3SuWR9ArICnR18guADN9B3LsuNaqyDdc",
       authDomain: "sen-football-fitness.firebaseapp.com",
@@ -398,11 +463,55 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    try { getAnalytics(app); } catch (e) { /* 忽略本地脫機環境下的 Analytics 警告 */ }
-    const db = getFirestore(app);
+    // 強制啟用 experimentalAutoDetectLongPolling，徹底解決手機行動網絡、學校/機構 Wi-Fi 或防火牆下 WebChannel 卡死導致登入後拉不出畫面的問題
+    const db = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true
+    });
 
-    // ==================== 工具函數：香港本地時區與加密雜湊 ====================
-    // 修正 UTC 時區 Bug：強制使用裝置本地年月日格式化 YYYY-MM-DD
+    // ==================== UI 輔助與自動重試穩定機制 ====================
+    const SESSION_STORAGE_KEY = "sen_football_session_v2";
+
+    function showLoading(text = "正在連線同步資料...") {
+      const overlay = document.getElementById("globalLoadingOverlay");
+      const label = document.getElementById("loadingStatusText");
+      if (label) label.innerText = text;
+      if (overlay) overlay.classList.remove("hidden");
+    }
+
+    function hideLoading() {
+      const overlay = document.getElementById("globalLoadingOverlay");
+      if (overlay) overlay.classList.add("hidden");
+    }
+
+    let toastTimer = null;
+    function showToast(msg, isError = false) {
+      const banner = document.getElementById("toastBanner");
+      if (!banner) return;
+      banner.innerText = msg;
+      banner.className = `fixed top-16 left-1/2 -translate-x-1/2 z-50 max-w-[92vw] w-max px-4 py-3 rounded-2xl shadow-2xl border-2 text-sm font-black text-center transition-all ${
+        isError ? 'bg-rose-700 text-white border-rose-300' : 'bg-slate-900 text-white border-emerald-400'
+      }`;
+      banner.classList.remove("hidden");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => banner.classList.add("hidden"), 3500);
+    }
+
+    // 自動重試包裝器：當手機網絡瞬間不穩時自動重試 3 次，無需手動重新載入網頁
+    async function withRetry(fn, retries = 3, delayMs = 600) {
+      let lastErr;
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await fn();
+        } catch (err) {
+          lastErr = err;
+          console.warn(`Firestore 請求重試中 (${i + 1}/${retries})...`, err);
+          await new Promise(res => setTimeout(res, delayMs * (i + 1)));
+        }
+      }
+      throw lastErr;
+    }
+
+    // ==================== 工具函數：香港本地時區與「日/月」計算 ====================
     function formatLocalYMD(d = new Date()) {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -410,14 +519,34 @@
       return `${year}-${month}-${day}`;
     }
 
-    // 取得指定日期所屬星期的「星期日」本地日期字串
     function getSundayOfDate(d = new Date()) {
       const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
       copy.setDate(copy.getDate() - copy.getDay());
       return formatLocalYMD(copy);
     }
 
-    // 雜湊函數（將密碼轉為不可逆 Hash 存入 users 表，避免學員端載入明文密碼）
+    // 根據週次 ID (YYYY-MM-DD, 星期日) 及 dayIndex (0-6)，計算出真實「日/月」（如 21/10）及完整 YYYY-MM-DD
+    function getDayDateInfo(weekIdStr, dayIdx) {
+      const parts = weekIdStr.split("-").map(Number);
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      dt.setDate(dt.getDate() + dayIdx);
+      const dayNum = dt.getDate();
+      const monthNum = dt.getMonth() + 1;
+      const ymd = formatLocalYMD(dt);
+      return {
+        ddmm: `${dayNum}/${monthNum}`, // 嚴格遵循香港習慣：日/月（例如 21/10）
+        ymd,
+        isToday: ymd === formatLocalYMD(new Date())
+      };
+    }
+
+    // 將週次 ID 轉為香港易讀的「日/月 - 日/月」範圍字串
+    function formatWeekRangeHK(weekIdStr) {
+      const sun = getDayDateInfo(weekIdStr, 0).ddmm;
+      const sat = getDayDateInfo(weekIdStr, 6).ddmm;
+      return `${sun} 至 ${sat}`;
+    }
+
     function hashPassword(str) {
       let h1 = 0xdeadbeef ^ str.length, h2 = 0x41c6ce57 ^ str.length;
       for (let i = 0, ch; i < str.length; i++) {
@@ -430,7 +559,6 @@
       return "h_" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
     }
 
-    // 驗證職員通行碼（不將明文寫在 HTML 提示或純文字常數中）
     function isValidCoachCode(input) {
       const expected = [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
       return input === expected;
@@ -438,21 +566,22 @@
 
     function requireAdmin() {
       if (!currentUser || currentUser.role !== "admin") {
-        alert("⚠️ 權限不足：此操作只限教練／管理員執行！");
+        showToast("⚠️ 權限不足：此操作只限教練執行！", true);
         throw new Error("Unauthorized");
       }
     }
 
-    // ==================== 系統狀態變數（閉包保護） ====================
+    // ==================== 系統狀態變數 ====================
     const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+    const shortDayNames = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
     const thisWeekId = getSundayOfDate(new Date());
     const todayDayIndex = new Date().getDay();
 
     let currentUser = null;
     let selectedWeekId = thisWeekId;
     let currentDayIndex = todayDayIndex;
+    let selectedAchWeekId = thisWeekId; // 成就分頁查看特定週次的選擇器
 
-    // 固定 ID 運動字典與預設課表（保證改名後 ID 不變）
     let exerciseCatalog = {
       "ex_001": { id: "ex_001", name: "深蹲 🦵🏻", target: 20, unit: "下" },
       "ex_002": { id: "ex_002", name: "開合跳 🏃🏻‍♂️", target: 30, unit: "下" },
@@ -464,39 +593,39 @@
       exerciseCatalog["ex_003"]
     ];
 
+    // 預設成就表：清晰分為 weekly_stars (每週刷新) 與 total_stars (歷史永久累積)
     let achievementsList = [
-      { id: "ach_4", icon: "🥈", title: "銀牌・合格以達標", type: "weekly_stars", target: 4, desc: "單週完成 4 日訓練！目標起碼四日做體能 👍🏻以達標" },
-      { id: "ach_5", icon: "🥇", title: "金牌・超越自己", type: "weekly_stars", target: 5, desc: "單週完成 5 日訓練！超越自己 👍🏻" },
-      { id: "ach_6", icon: "🏆", title: "獎盃・突破界限", type: "weekly_stars", target: 6, desc: "單週完成 6 日訓練！突破界限 👍🏻" },
-      { id: "ach_7", icon: "👑", title: "體能王子", type: "weekly_stars", target: 7, desc: "每日有做，7日做曬！👑🤴🏻🥇體能王子🤴🏻👍🏻👍🏻💪🏻" },
-      { id: "ach_total_15", icon: "🔥", title: "恆心足球小將", type: "total_stars", target: 15, desc: "歷史累積獲得 15 粒星！堅持就是勝利 💪🏻" },
-      { id: "ach_total_30", icon: "🌟", title: "最佳狀態傳奇", type: "total_stars", target: 30, desc: "歷史累積獲得 30 粒星！保持最佳狀態 💪🏻💪🏼" }
+      { id: "ach_w4", icon: "🥈", title: "銀牌・本週合格達標", type: "weekly_stars", target: 4, desc: "單週完成 4 日體能訓練！目標起碼四日做體能 👍🏻 已達標！" },
+      { id: "ach_w5", icon: "🥇", title: "金牌・超越自己", type: "weekly_stars", target: 5, desc: "單週完成 5 日訓練！超越自己，狀態大勇 👍🏻！" },
+      { id: "ach_w6", icon: "🏆", title: "獎盃・突破界限", type: "weekly_stars", target: 6, desc: "單週完成 6 日訓練！突破界限，毅力驚人 👍🏻！" },
+      { id: "ach_w7", icon: "👑", title: "體能王子（單週全勤）", type: "weekly_stars", target: 7, desc: "單週 7 日全部做齊！👑🤴🏻🥇 體能王子 🤴🏻👍🏻💪🏻！" },
+      { id: "ach_h10", icon: "🌱", title: "體能新星（累計10星）", type: "total_stars", target: 10, desc: "歷史累積獲得 10 粒星！好開始是成功的一半 💪🏻" },
+      { id: "ach_h25", icon: "🔥", title: "恆心足球小將（累計25星）", type: "total_stars", target: 25, desc: "歷史累積獲得 25 粒星！堅持就是勝利 💪🏻" },
+      { id: "ach_h50", icon: "🌟", title: "最佳狀態傳奇（累計50星）", type: "total_stars", target: 50, desc: "歷史累積獲得 50 粒星！保持最佳狀態 💪🏻💪🏼" },
+      { id: "ach_h100", icon: "🦁", title: "百星鐵人球王（累計100星）", type: "total_stars", target: 100, desc: "歷史累積獲得 100 粒星！你是球隊最強榜樣 👑⚽！" }
     ];
 
-    // 快取結構（避免重複全表查詢）
-    let studentLogsMap = {}; // { [weekId]: daysObj } 當前登入學員自己的紀錄
-    let adminUsersList = []; // 教練後台專用用戶清單
-    let adminSecretsMap = {}; // { [userId]: passwordPlain } 教練專用密碼表
-    let adminWeekLogsMap = {}; // { [userId]: daysObj } 教練當前所選週次的全隊紀錄
+    let studentLogsMap = {};
+    let adminUsersList = [];
+    let adminSecretsMap = {};
+    let adminWeekLogsMap = {};
     let inspectedStudent = null;
-    let inspectedStudentLogs = {}; // { [weekId]: daysObj }
+    let inspectedStudentLogs = {};
     let coachSelectedDayIdx = todayDayIndex;
 
-    // Chart.js 實例
     let stuDailyChartInstance = null;
     let stuGrowthChartInstance = null;
     let coachGrowthChartInstance = null;
 
     function getBadgeInfo(stars) {
       const starStr = "🌟".repeat(stars) + "☆".repeat(Math.max(0, 7 - stars));
-      if (stars >= 7) return { stars: starStr, shortBadge: "👑 體能王子 (7星)", title: "👑 每日有做, 7日做曬, 👑🤴🏻🥇體能王子🤴🏻👍🏻👍🏻💪🏻" };
-      if (stars === 6) return { stars: starStr, shortBadge: "🏆 獎盃 (6星)", title: "🏆 6日 獎盃 突破界限 👍🏻" };
-      if (stars === 5) return { stars: starStr, shortBadge: "🥇 金牌 (5星)", title: "🥇 5日 金牌 超越自己 👍🏻" };
-      if (stars === 4) return { stars: starStr, shortBadge: "🥈 銀牌合格 (4星)", title: "🥈 4日 銀牌 合格 👍🏻 以達標" };
-      return { stars: starStr, shortBadge: `🌟 ${stars}粒星 (未滿4日)`, title: `🌟 每日一粒星 🌟（已儲 ${stars} 粒星，目標起碼四日！）` };
+      if (stars >= 7) return { stars: starStr, shortBadge: "👑 體能王子 (7星)", title: "👑 每日有做，7日做曬！👑🤴🏻🥇體能王子🤴🏻👍🏻💪🏻" };
+      if (stars === 6) return { stars: starStr, shortBadge: "🏆 獎盃 (6星)", title: "🏆 6日 獎盃・突破界限 👍🏻" };
+      if (stars === 5) return { stars: starStr, shortBadge: "🥇 金牌 (5星)", title: "🥇 5日 金牌・超越自己 👍🏻" };
+      if (stars === 4) return { stars: starStr, shortBadge: "🥈 銀牌合格 (4星)", title: "🥈 4日 銀牌・合格已達標 👍🏻" };
+      return { stars: starStr, shortBadge: `🌟 ${stars}粒星 (差${4 - stars}日達標)`, title: `🌟 本週已儲 ${stars} 粒星（目標起碼 4 日做體能！）` };
     }
 
-    // 兼容讀取某日某動作的數值（優先讀取固定 ex.id，兼容舊版 ex.name）
     function getExerciseValueFromRecord(recordsObj, ex) {
       if (!recordsObj) return undefined;
       if (recordsObj[ex.id] !== undefined) return recordsObj[ex.id];
@@ -504,33 +633,32 @@
       return undefined;
     }
 
-    // ==================== 載入基礎設定（課表字典與成就） ====================
+    // ==================== 載入基礎設定 ====================
     async function loadGlobalSettings() {
-      const [catSnap, achSnap] = await Promise.all([
+      const [catSnap, achSnap] = await withRetry(() => Promise.all([
         getDoc(doc(db, "settings", "exercise_catalog")),
         getDoc(doc(db, "settings", "achievements"))
-      ]);
+      ]));
       if (catSnap.exists() && catSnap.data().catalog) {
         exerciseCatalog = { ...exerciseCatalog, ...catSnap.data().catalog };
       }
-      if (achSnap.exists() && achSnap.data().list) {
+      if (achSnap.exists() && Array.isArray(achSnap.data().list) && achSnap.data().list.length > 0) {
         achievementsList = achSnap.data().list;
       }
     }
 
     async function loadScheduleForWeek(wId) {
-      const snap = await getDoc(doc(db, "schedules", wId));
+      const snap = await withRetry(() => getDoc(doc(db, "schedules", wId)));
       let rawList = null;
       if (snap.exists() && snap.data().exercises && snap.data().exercises.length > 0) {
         rawList = snap.data().exercises;
       } else {
-        const defSnap = await getDoc(doc(db, "schedules", "default"));
+        const defSnap = await withRetry(() => getDoc(doc(db, "schedules", "default")));
         if (defSnap.exists() && defSnap.data().exercises && defSnap.data().exercises.length > 0) {
           rawList = defSnap.data().exercises;
         }
       }
       if (rawList) {
-        // 確保每個動作都有穩定 id 並同步最新名稱到 catalog
         currentSchedule = rawList.map((ex, idx) => {
           const exId = ex.id || `ex_00${idx + 1}`;
           const normalized = { id: exId, name: ex.name, target: Number(ex.target) || 10, unit: ex.unit || "下" };
@@ -540,7 +668,58 @@
       }
     }
 
-    // ==================== 1. 註冊與登入邏輯（按需單筆查詢、不拉全表） ====================
+    // ==================== 1. 登入、註冊與自動保持登入（Persistent Session） ====================
+    function saveUserSession(userObj) {
+      try {
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+          id: userObj.id,
+          chineseName: userObj.chineseName,
+          username: userObj.username,
+          phone: userObj.phone,
+          role: userObj.role,
+          savedAt: Date.now()
+        }));
+      } catch (e) {
+        console.warn("無法寫入 localStorage:", e);
+      }
+    }
+
+    function clearUserSession() {
+      try {
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      } catch (e) {}
+    }
+
+    // 網頁載入時自動檢查是否有登入紀錄，免除重新整理後自動登出的困擾
+    async function restoreSessionOnBoot() {
+      let cached = null;
+      try {
+        const raw = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (raw) cached = JSON.parse(raw);
+      } catch (e) {}
+
+      if (!cached || !cached.id) return;
+
+      showLoading(`歡迎回來，${cached.chineseName}！正在自動登入...`);
+      try {
+        // 先用快取身份即時進入，同時向伺服器確認最新角色與資料
+        const userSnap = await withRetry(() => getDoc(doc(db, "users", cached.id)));
+        if (userSnap.exists()) {
+          currentUser = { id: userSnap.id, ...userSnap.data() };
+          saveUserSession(currentUser);
+        } else {
+          currentUser = cached;
+        }
+        await enterApp();
+      } catch (err) {
+        console.warn("自動恢復連線失敗，使用本地快取身份進入：", err);
+        currentUser = cached;
+        await enterApp();
+      } finally {
+        hideLoading();
+      }
+    }
+
     async function handleRegister() {
       const chineseName = document.getElementById("regChineseName").value.trim();
       const username = document.getElementById("regUsername").value.trim();
@@ -556,49 +735,55 @@
         return;
       }
 
-      const usernameLower = username.toLowerCase();
+      showLoading("正在為你建立帳號...");
+      try {
+        const usernameLower = username.toLowerCase();
+        const [uSnap, pSnap] = await withRetry(() => Promise.all([
+          getDocs(query(collection(db, "users"), where("usernameLower", "==", usernameLower))),
+          getDocs(query(collection(db, "users"), where("phone", "==", phone)))
+        ]));
 
-      // 按需查詢帳號或電話是否已被使用（不拉取全部用戶）
-      const [uSnap, pSnap] = await Promise.all([
-        getDocs(query(collection(db, "users"), where("usernameLower", "==", usernameLower))),
-        getDocs(query(collection(db, "users"), where("phone", "==", phone)))
-      ]);
+        if (!uSnap.empty) {
+          errBox.innerText = `⚠️ 帳號名稱「${username}」已經有人使用，請換另一個帳號名稱！`;
+          errBox.classList.remove("hidden");
+          return;
+        }
+        if (!pSnap.empty) {
+          errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！請直接返回用電話號碼登入。`;
+          errBox.classList.remove("hidden");
+          return;
+        }
 
-      if (!uSnap.empty) {
-        errBox.innerText = `⚠️ 帳號名稱「${username}」已經有人使用，請換另一個帳號名稱！`;
+        const uid = "user_" + Date.now();
+        const role = isValidCoachCode(coachCode) ? "admin" : "student";
+        const passwordHash = hashPassword(password);
+
+        const userDoc = {
+          chineseName,
+          username,
+          usernameLower,
+          phone,
+          passwordHash,
+          role,
+          needHelp: false,
+          createdAt: formatLocalYMD(new Date())
+        };
+
+        await withRetry(() => Promise.all([
+          setDoc(doc(db, "users", uid), userDoc),
+          setDoc(doc(db, "user_secrets", uid), { passwordPlain: password })
+        ]));
+
+        currentUser = { id: uid, ...userDoc };
+        saveUserSession(currentUser);
+        showToast(`🎉 註冊成功！歡迎你，${chineseName}！`);
+        await enterApp();
+      } catch (err) {
+        errBox.innerText = "⚠️ 網絡連線不穩定，請再按一次「完成註冊並自動登入」重試。";
         errBox.classList.remove("hidden");
-        return;
+      } finally {
+        hideLoading();
       }
-      if (!pSnap.empty) {
-        errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！請直接返回用電話號碼登入。`;
-        errBox.classList.remove("hidden");
-        return;
-      }
-
-      const uid = "user_" + Date.now();
-      const role = isValidCoachCode(coachCode) ? "admin" : "student";
-      const passwordHash = hashPassword(password);
-
-      // 公開用戶表只存 passwordHash，不存明文密碼
-      const userDoc = {
-        chineseName,
-        username,
-        usernameLower,
-        phone,
-        passwordHash,
-        role,
-        needHelp: false,
-        createdAt: formatLocalYMD(new Date())
-      };
-
-      // 明文密碼獨立存於 user_secrets 供教練後台查閱支援
-      await Promise.all([
-        setDoc(doc(db, "users", uid), userDoc),
-        setDoc(doc(db, "user_secrets", uid), { passwordPlain: password })
-      ]);
-
-      currentUser = { id: uid, ...userDoc };
-      await enterApp();
     }
 
     async function handleLogin() {
@@ -613,48 +798,56 @@
         return;
       }
 
-      const idLower = identifier.toLowerCase();
-      // 單筆查詢匹配的帳號或電話
-      const [uSnap, pSnap, legacySnap] = await Promise.all([
-        getDocs(query(collection(db, "users"), where("usernameLower", "==", idLower))),
-        getDocs(query(collection(db, "users"), where("phone", "==", identifier))),
-        getDocs(query(collection(db, "users"), where("username", "==", identifier)))
-      ]);
+      showLoading("正在驗證帳號並載入資料...");
+      try {
+        const idLower = identifier.toLowerCase();
+        const [uSnap, pSnap, legacySnap] = await withRetry(() => Promise.all([
+          getDocs(query(collection(db, "users"), where("usernameLower", "==", idLower))),
+          getDocs(query(collection(db, "users"), where("phone", "==", identifier))),
+          getDocs(query(collection(db, "users"), where("username", "==", identifier)))
+        ]));
 
-      let matchedDoc = null;
-      if (!uSnap.empty) matchedDoc = uSnap.docs[0];
-      else if (!pSnap.empty) matchedDoc = pSnap.docs[0];
-      else if (!legacySnap.empty) matchedDoc = legacySnap.docs[0];
+        let matchedDoc = null;
+        if (!uSnap.empty) matchedDoc = uSnap.docs[0];
+        else if (!pSnap.empty) matchedDoc = pSnap.docs[0];
+        else if (!legacySnap.empty) matchedDoc = legacySnap.docs[0];
 
-      if (!matchedDoc) {
-        errBox.innerText = "❌ 找不到這個電話號碼或帳號名稱，請檢查有沒有打錯，或按下方註冊！";
+        if (!matchedDoc) {
+          errBox.innerText = "❌ 找不到這個電話號碼或帳號名稱，請檢查有沒有打錯，或按下方註冊！";
+          errBox.classList.remove("hidden");
+          return;
+        }
+
+        const userData = { id: matchedDoc.id, ...matchedDoc.data() };
+        const inputHash = hashPassword(pwd);
+
+        const isPasswordValid = (userData.passwordHash && userData.passwordHash === inputHash) || 
+                                (userData.password && userData.password === pwd);
+
+        if (!isPasswordValid) {
+          errBox.innerText = "❌ 密碼唔啱喎！請再試一次，或者按下方「忘記密碼」通知教練幫手。";
+          errBox.classList.remove("hidden");
+          return;
+        }
+
+        if (!userData.passwordHash) {
+          await withRetry(() => Promise.all([
+            updateDoc(doc(db, "users", userData.id), { passwordHash: inputHash, usernameLower: (userData.username || "").toLowerCase() }),
+            setDoc(doc(db, "user_secrets", userData.id), { passwordPlain: pwd })
+          ]));
+        }
+
+        currentUser = userData;
+        saveUserSession(currentUser);
+        showToast(`👋🏻 歡迎回來，${currentUser.chineseName}！`);
+        await enterApp();
+      } catch (err) {
+        console.error("Login error:", err);
+        errBox.innerText = "⚠️ 網絡連線稍慢，系統未能拉取資料，請再按一次「登入系統」！";
         errBox.classList.remove("hidden");
-        return;
+      } finally {
+        hideLoading();
       }
-
-      const userData = { id: matchedDoc.id, ...matchedDoc.data() };
-      const inputHash = hashPassword(pwd);
-
-      // 兼容驗證 passwordHash 或舊版明文 password
-      const isPasswordValid = (userData.passwordHash && userData.passwordHash === inputHash) || 
-                              (userData.password && userData.password === pwd);
-
-      if (!isPasswordValid) {
-        errBox.innerText = "❌ 密碼唔啱喎！請再試一次，或者按下方「忘記密碼」通知教練幫手。";
-        errBox.classList.remove("hidden");
-        return;
-      }
-
-      // 如屬舊版明文帳號，登入時自動升級為分離式加密儲存
-      if (!userData.passwordHash) {
-        await Promise.all([
-          updateDoc(doc(db, "users", userData.id), { passwordHash: inputHash, usernameLower: (userData.username || "").toLowerCase() }),
-          setDoc(doc(db, "user_secrets", userData.id), { passwordPlain: pwd })
-        ]);
-      }
-
-      currentUser = userData;
-      await enterApp();
     }
 
     async function handleForgotPassword() {
@@ -662,38 +855,60 @@
       const inputKey = identifier || prompt("請輸入你的「中文姓名」、「電話號碼」或「帳號名稱」，系統會即時通知教練幫你重設密碼：");
       if (!inputKey) return;
 
-      const trimmed = inputKey.trim();
-      const [uSnap, pSnap, cSnap] = await Promise.all([
-        getDocs(query(collection(db, "users"), where("usernameLower", "==", trimmed.toLowerCase()))),
-        getDocs(query(collection(db, "users"), where("phone", "==", trimmed))),
-        getDocs(query(collection(db, "users"), where("chineseName", "==", trimmed)))
-      ]);
+      showLoading("正在傳送求助通知給教練...");
+      try {
+        const trimmed = inputKey.trim();
+        const [uSnap, pSnap, cSnap] = await withRetry(() => Promise.all([
+          getDocs(query(collection(db, "users"), where("usernameLower", "==", trimmed.toLowerCase()))),
+          getDocs(query(collection(db, "users"), where("phone", "==", trimmed))),
+          getDocs(query(collection(db, "users"), where("chineseName", "==", trimmed)))
+        ]));
 
-      const foundDoc = !uSnap.empty ? uSnap.docs[0] : (!pSnap.empty ? pSnap.docs[0] : (!cSnap.empty ? cSnap.docs[0] : null));
-      if (foundDoc) {
-        const d = foundDoc.data();
-        await updateDoc(doc(db, "users", foundDoc.id), { needHelp: true });
-        alert(`✅ 已通知教練你（${d.chineseName}）忘記密碼！\n教練在後台會見到紅燈提示並幫你重設 💪🏻`);
-      } else {
-        alert("⚠️ 系統找不到這個名字或電話，請直接向教練查詢！");
+        const foundDoc = !uSnap.empty ? uSnap.docs[0] : (!pSnap.empty ? pSnap.docs[0] : (!cSnap.empty ? cSnap.docs[0] : null));
+        if (foundDoc) {
+          const d = foundDoc.data();
+          await withRetry(() => updateDoc(doc(db, "users", foundDoc.id), { needHelp: true }));
+          alert(`✅ 已通知教練你（${d.chineseName}）忘記密碼！\n教練在後台會見到紅燈提示並幫你重設 💪🏻`);
+        } else {
+          alert("⚠️ 系統找不到這個名字或電話，請直接向教練查詢！");
+        }
+      } catch (e) {
+        alert("⚠️ 傳送失敗，請檢查網絡連線或直接向教練查詢。");
+      } finally {
+        hideLoading();
       }
     }
 
     // ==================== 2. 進入主系統與初始化 ====================
     async function enterApp() {
+      // 先立即切換畫面結構，確保用戶不會看到空白或卡在登入頁
       document.getElementById("authSection").classList.add("hidden");
       document.getElementById("userHeader").classList.remove("hidden");
-      document.getElementById("currentUserBadge").innerText = `${currentUser.chineseName} (${currentUser.role === 'admin' ? '教練/管理員' : '學員'})`;
-
-      await loadGlobalSettings();
-      await loadScheduleForWeek(thisWeekId);
+      document.getElementById("currentUserBadge").innerText = `${currentUser.chineseName} (${currentUser.role === 'admin' ? '教練' : '學員'})`;
 
       if (currentUser.role === "admin") {
+        document.getElementById("studentSection").classList.add("hidden");
         document.getElementById("adminSection").classList.remove("hidden");
-        await initAdminDashboard();
       } else {
+        document.getElementById("adminSection").classList.add("hidden");
         document.getElementById("studentSection").classList.remove("hidden");
-        await initStudentDashboard();
+      }
+
+      showLoading("正在載入課表與你的體能紀錄...");
+      try {
+        await loadGlobalSettings();
+        await loadScheduleForWeek(thisWeekId);
+
+        if (currentUser.role === "admin") {
+          await initAdminDashboard();
+        } else {
+          await initStudentDashboard();
+        }
+      } catch (err) {
+        console.error("初始化資料時發生錯誤:", err);
+        showToast("⚠️ 網絡較慢，可按右上角「🔄 同步」重新載入資料", true);
+      } finally {
+        hideLoading();
       }
     }
 
@@ -707,11 +922,10 @@
       return Array.from(set).sort().reverse();
     }
 
-    // ==================== 3. 學員端功能（防作弊、單項圖表、個人成長曲線） ====================
+    // ==================== 3. 學員端功能 ====================
     async function initStudentDashboard() {
-      // 只查詢該學員自己的打卡紀錄（極速、省流量）
       const q = query(collection(db, "logs"), where("userId", "==", currentUser.id));
-      const snap = await getDocs(q);
+      const snap = await withRetry(() => getDocs(q));
       studentLogsMap = {};
       snap.forEach(d => {
         const data = d.data();
@@ -720,11 +934,23 @@
 
       const weeks = getRecentWeeksList(Object.keys(studentLogsMap));
       const selectEl = document.getElementById("studentWeekSelect");
-      selectEl.innerHTML = weeks.map(w => 
-        `<option value="${w}">${w} 週（星期日起）${w === thisWeekId ? '【本週・可打卡】' : '【歷史・只供查閱】'}</option>`
-      ).join("");
+      selectEl.innerHTML = weeks.map(w => {
+        const rangeStr = formatWeekRangeHK(w);
+        return `<option value="${w}">${rangeStr}（${w === thisWeekId ? '本週・可打卡' : '歷史週次'}）</option>`;
+      }).join("");
+
+      // 成就頁面的週次選擇器（讓學員回顧任何一週的每週成就）
+      const achWeekSel = document.getElementById("achWeekFilterSelect");
+      if (achWeekSel) {
+        achWeekSel.innerHTML = weeks.map(w => {
+          const rangeStr = formatWeekRangeHK(w);
+          const stars = Object.values(studentLogsMap[w] || {}).filter(d => d && d.completed).length;
+          return `<option value="${w}">${rangeStr} ${w === thisWeekId ? '【本週】' : ''} (獲 ${stars} 星)</option>`;
+        }).join("");
+      }
 
       selectedWeekId = thisWeekId;
+      selectedAchWeekId = thisWeekId;
       currentDayIndex = todayDayIndex;
 
       populateExerciseSelectors();
@@ -735,13 +961,11 @@
     }
 
     function populateExerciseSelectors() {
-      // 供每日棒形圖選擇單項動作
       const dailySelect = document.getElementById("stuDailyChartExSelect");
       dailySelect.innerHTML = currentSchedule.map(ex => 
         `<option value="${ex.id}">${ex.name}（單位：${ex.unit}）</option>`
       ).join("");
 
-      // 供成長曲線選擇「每週星數」或「特定動作趨勢」
       const allExList = Object.values(exerciseCatalog);
       const growthOptions = [
         `<option value="weekly_stars">🌟 每週獲得星數成長曲線（單位：星/日）</option>`,
@@ -756,31 +980,32 @@
     function renderStudentWeekView() {
       const isCurrentWeek = (selectedWeekId === thisWeekId);
       const weekDaysObj = studentLogsMap[selectedWeekId] || {};
+      const rangeStr = formatWeekRangeHK(selectedWeekId);
 
       document.getElementById("weekLabelStudent").innerText = 
-        `📅 紀錄週期：${selectedWeekId}（星期日）起計 7 日 ${isCurrentWeek ? '【本週最新】' : '【歷史紀錄】'}`;
+        `📅 週期：${rangeStr}（星期日起計 7 日）${isCurrentWeek ? '【本週最新】' : '【歷史紀錄】'}`;
 
       const completedDays = Object.values(weekDaysObj).filter(d => d && d.completed).length;
       const badge = getBadgeInfo(completedDays);
       document.getElementById("starDisplay").innerText = badge.stars;
       document.getElementById("badgeTitle").innerText = badge.title;
 
-      // 顯示可編輯或只讀狀態標籤
       const statusBadge = document.getElementById("stuEditStatusBadge");
       const saveBtn = document.getElementById("btnSaveWorkout");
+      const curDayInfo = getDayDateInfo(selectedWeekId, currentDayIndex);
 
       if (!isCurrentWeek) {
-        statusBadge.className = "text-xs font-extrabold px-3 py-1 rounded-full bg-amber-100 text-amber-800";
+        statusBadge.className = "text-xs font-extrabold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800";
         statusBadge.innerText = "🔒 歷史週次（只供查閱，如需更正請搵教練）";
         saveBtn.disabled = true;
-        saveBtn.className = "w-full bg-slate-300 text-slate-500 text-lg font-black py-4 rounded-2xl cursor-not-allowed mt-2";
+        saveBtn.className = "w-full bg-slate-300 text-slate-500 text-sm sm:text-lg font-black py-3.5 px-3 rounded-2xl cursor-not-allowed mt-2";
         saveBtn.innerText = "🔒 歷史週次只供查閱（防止補打卡刷星）";
       } else {
-        statusBadge.className = "text-xs font-extrabold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800";
+        statusBadge.className = "text-xs font-extrabold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800";
         statusBadge.innerText = "✅ 本週已到日子均可輸入或修改";
         saveBtn.disabled = false;
-        saveBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xl sm:text-2xl font-black py-4 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2";
-        saveBtn.innerText = `🌟 儲存／更新【${dayNames[currentDayIndex]}】紀錄 🌟`;
+        saveBtn.className = "w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-base sm:text-2xl font-black py-3.5 sm:py-4 px-3 rounded-2xl shadow-lg shadow-emerald-500/30 active:scale-95 transition mt-2";
+        saveBtn.innerText = `🌟 儲存【${shortDayNames[currentDayIndex]} ${curDayInfo.ddmm}】紀錄 🌟`;
       }
 
       renderStudentDayTabs(weekDaysObj, isCurrentWeek);
@@ -788,25 +1013,39 @@
       renderStudentDailyChart(weekDaysObj);
     }
 
+    // 7 日按鈕：顯示「週三 21/10」格式（日/月），並標示「今日」，細屏幕自動縮減邊距防止爆版
     function renderStudentDayTabs(weekDaysObj, isCurrentWeek) {
       const container = document.getElementById("dayTabs");
-      container.innerHTML = dayNames.map((dName, idx) => {
+      container.innerHTML = shortDayNames.map((shortName, idx) => {
         const isDone = weekDaysObj[idx]?.completed;
         const isFutureDay = isCurrentWeek && (idx > todayDayIndex);
         const isSelected = idx === currentDayIndex;
+        const dateInfo = getDayDateInfo(selectedWeekId, idx);
+
+        const todayBadgeHtml = dateInfo.isToday
+          ? `<span class="text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.2 rounded-full leading-tight mt-0.5 ${isSelected ? 'bg-amber-300 text-amber-950' : 'bg-emerald-600 text-white'}">今日</span>`
+          : `<span class="text-[9px] sm:text-[10px] opacity-0 leading-tight mt-0.5 select-none">今日</span>`;
 
         if (isFutureDay) {
           return `
-            <button disabled class="py-2.5 px-1 rounded-2xl font-bold text-xs sm:text-sm border-2 bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed flex flex-col items-center">
-              <span>${dName.replace('星期','週')}</span>
-              <span class="text-sm mt-1" title="未到日子">🔒</span>
+            <button disabled class="py-1.5 sm:py-2.5 px-0.5 sm:px-1 rounded-2xl font-bold border-2 bg-slate-100 text-slate-400 border-slate-200 opacity-60 cursor-not-allowed flex flex-col items-center justify-between min-w-0">
+              <span class="text-[11px] sm:text-sm font-black leading-tight">${shortName}</span>
+              <span class="text-[10px] sm:text-xs font-extrabold leading-tight mt-0.5">${dateInfo.ddmm}</span>
+              ${todayBadgeHtml}
+              <span class="text-sm sm:text-base mt-0.5" title="未到日子">🔒</span>
             </button>
           `;
         }
         return `
-          <button data-dayidx="${idx}" class="stu-day-btn py-2.5 px-1 rounded-2xl font-black text-xs sm:text-sm border-2 flex flex-col items-center transition ${isSelected ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-105' : 'bg-slate-50 text-slate-700 border-slate-200'}">
-            <span>${dName.replace('星期','週')}</span>
-            <span class="text-base sm:text-lg mt-1">${isDone ? '🌟' : '⚪'}</span>
+          <button data-dayidx="${idx}" class="stu-day-btn py-1.5 sm:py-2.5 px-0.5 sm:px-1 rounded-2xl font-black border-2 flex flex-col items-center justify-between min-w-0 transition ${
+            isSelected 
+              ? 'bg-emerald-600 text-white border-emerald-700 shadow-md scale-[1.03]' 
+              : (dateInfo.isToday ? 'bg-emerald-50 text-emerald-950 border-emerald-400' : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100')
+          }">
+            <span class="text-[11px] sm:text-sm font-black leading-tight">${shortName}</span>
+            <span class="text-[10px] sm:text-xs font-extrabold leading-tight mt-0.5 ${isSelected ? 'text-emerald-100' : 'text-slate-500'}">${dateInfo.ddmm}</span>
+            ${todayBadgeHtml}
+            <span class="text-sm sm:text-lg mt-0.5">${isDone ? '🌟' : '⚪'}</span>
           </button>
         `;
       }).join("");
@@ -815,7 +1054,7 @@
     function renderStudentExerciseInputs(weekDaysObj, isCurrentWeek) {
       const container = document.getElementById("exerciseInputs");
       if (currentSchedule.length === 0) {
-        container.innerHTML = `<p class="text-center text-amber-700 bg-amber-50 p-4 rounded-2xl font-bold">⚠️ 教練尚未設定本週訓練動作。</p>`;
+        container.innerHTML = `<p class="text-center text-amber-700 bg-amber-50 p-4 rounded-2xl font-bold text-sm">⚠️ 教練尚未設定本週訓練動作。</p>`;
         return;
       }
 
@@ -826,16 +1065,16 @@
         const savedVal = getExerciseValueFromRecord(dayData, ex);
         const val = savedVal !== undefined ? savedVal : ex.target;
         return `
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="text-center sm:text-left">
-              <span class="text-lg sm:text-xl font-black text-slate-800">${ex.name}</span>
-              <span class="text-xs sm:text-sm text-emerald-700 font-bold block">建議目標：${ex.target} ${ex.unit}</span>
+          <div class="bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2.5">
+            <div class="text-center sm:text-left min-w-0 w-full sm:w-auto">
+              <span class="text-base sm:text-xl font-black text-slate-800 block">${ex.name}</span>
+              <span class="text-xs sm:text-sm text-emerald-700 font-bold block mt-0.5">🎯 建議目標：${ex.target} ${ex.unit}</span>
             </div>
-            <div class="flex items-center gap-2">
-              <button data-adjidx="${i}" data-delta="-5" ${disabledAttr} class="stu-adj-btn bg-white border-2 border-slate-300 active:bg-slate-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm disabled:opacity-40">-5</button>
-              <input type="number" id="stu_ex_input_${ex.id}" value="${val}" min="0" ${disabledAttr} class="w-20 h-12 text-center text-xl font-black border-2 border-emerald-400 rounded-xl bg-white disabled:bg-slate-100">
-              <span class="font-bold text-slate-600 text-sm">${ex.unit}</span>
-              <button data-adjidx="${i}" data-delta="5" ${disabledAttr} class="stu-adj-btn bg-emerald-100 border-2 border-emerald-400 text-emerald-900 active:bg-emerald-200 w-12 h-12 rounded-xl font-black text-lg shadow-sm disabled:opacity-40">+5</button>
+            <div class="flex items-center justify-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+              <button data-adjidx="${i}" data-delta="-5" ${disabledAttr} class="stu-adj-btn bg-white border-2 border-slate-300 active:bg-slate-200 w-11 h-11 sm:w-12 sm:h-12 rounded-xl font-black text-base sm:text-lg shadow-sm disabled:opacity-40 shrink-0">-5</button>
+              <input type="number" id="stu_ex_input_${ex.id}" value="${val}" min="0" ${disabledAttr} class="w-20 sm:w-24 h-11 sm:h-12 text-center text-lg sm:text-xl font-black border-2 border-emerald-400 rounded-xl bg-white disabled:bg-slate-100">
+              <span class="font-bold text-slate-600 text-xs sm:text-sm shrink-0">${ex.unit}</span>
+              <button data-adjidx="${i}" data-delta="5" ${disabledAttr} class="stu-adj-btn bg-emerald-100 border-2 border-emerald-400 text-emerald-900 active:bg-emerald-200 w-11 h-11 sm:w-12 sm:h-12 rounded-xl font-black text-base sm:text-lg shadow-sm disabled:opacity-40 shrink-0">+5</button>
             </div>
           </div>
         `;
@@ -843,17 +1082,14 @@
     }
 
     async function saveStudentDailyWorkout() {
-      // 防作弊檢查 1：只准儲存本週
       if (selectedWeekId !== thisWeekId) {
-        return alert("⚠️ 歷史週次只供查閱，不能補打卡！如需更正過往紀錄請搵教練幫手。");
+        return showToast("⚠️ 歷史週次只供查閱，不能補打卡！", true);
       }
-      // 防作弊檢查 2：不准預先打卡未來的日子
       if (currentDayIndex > todayDayIndex) {
-        return alert("⚠️ 未到嘅日子唔可以預先打卡㗎！");
+        return showToast("⚠️ 未到嘅日子唔可以預先打卡㗎！", true);
       }
-      // 防作弊檢查 3：課表不能為空
       if (currentSchedule.length === 0) {
-        return alert("⚠️ 教練尚未設定本週課表，暫時無法打卡！");
+        return showToast("⚠️ 教練尚未設定本週課表！", true);
       }
 
       const records = {};
@@ -865,38 +1101,49 @@
         totalEntered += val;
       });
 
-      if (!studentLogsMap[thisWeekId]) studentLogsMap[thisWeekId] = {};
+      showLoading("正在儲存你的打卡紀錄...");
+      try {
+        if (!studentLogsMap[thisWeekId]) studentLogsMap[thisWeekId] = {};
+        const dateInfo = getDayDateInfo(thisWeekId, currentDayIndex);
 
-      // 防白拿星：如果全部填 0，不給予星星
-      if (totalEntered <= 0) {
-        studentLogsMap[thisWeekId][currentDayIndex] = { completed: false, records, updatedAt: formatLocalYMD(new Date()) };
-        await setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
-          userId: currentUser.id,
-          weekId: thisWeekId,
-          days: studentLogsMap[thisWeekId]
-        });
-        alert(`ℹ️ 你輸入的動作數目全部為 0，已更新紀錄但未獲得星星。完成至少一項動作即可拎星 🌟！`);
-      } else {
-        studentLogsMap[thisWeekId][currentDayIndex] = { completed: true, records, updatedAt: formatLocalYMD(new Date()) };
-        await setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
-          userId: currentUser.id,
-          weekId: thisWeekId,
-          days: studentLogsMap[thisWeekId]
-        });
-        alert(`🌟 太棒了！已儲存【${dayNames[currentDayIndex]}】的體能紀錄，成功獲得一粒星！💪🏻`);
+        if (totalEntered <= 0) {
+          studentLogsMap[thisWeekId][currentDayIndex] = { completed: false, records, updatedAt: formatLocalYMD(new Date()) };
+          await withRetry(() => setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
+            userId: currentUser.id,
+            weekId: thisWeekId,
+            days: studentLogsMap[thisWeekId]
+          }));
+          showToast(`ℹ️ 動作數目為 0，已更新紀錄但未獲得星星 🌟`);
+        } else {
+          studentLogsMap[thisWeekId][currentDayIndex] = { completed: true, records, updatedAt: formatLocalYMD(new Date()) };
+          await withRetry(() => setDoc(doc(db, "logs", `${thisWeekId}_${currentUser.id}`), {
+            userId: currentUser.id,
+            weekId: thisWeekId,
+            days: studentLogsMap[thisWeekId]
+          }));
+          showToast(`🌟 勁呀！已儲存【${shortDayNames[currentDayIndex]} ${dateInfo.ddmm}】紀錄，成功拎到一粒星！💪🏻`);
+        }
+
+        renderStudentWeekView();
+        renderStudentGrowthChart();
+        renderStudentHistoryList();
+        renderStudentAchievements();
+      } catch (e) {
+        showToast("⚠️ 儲存時網絡不穩，請再按一次儲存按鈕！", true);
+      } finally {
+        hideLoading();
       }
-
-      renderStudentWeekView();
-      renderStudentGrowthChart();
-      renderStudentHistoryList();
-      renderStudentAchievements();
     }
 
-    // 修正後的該週每日圖表：按單一動作顯示，Y 軸標明清晰單位（下 / 秒）及目標線
     function renderStudentDailyChart(weekDaysObj) {
       const ctx = document.getElementById("studentDailyChart");
       const selectedExId = document.getElementById("stuDailyChartExSelect").value || currentSchedule[0]?.id;
       const exObj = exerciseCatalog[selectedExId] || currentSchedule[0] || { id: "ex_001", name: "訓練項目", target: 20, unit: "下" };
+
+      const labelsWithDate = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
+        const info = getDayDateInfo(selectedWeekId, dIdx);
+        return `${shortDayNames[dIdx]} ${info.ddmm}`;
+      });
 
       const dailyValues = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
         const rec = weekDaysObj[dIdx]?.records;
@@ -909,7 +1156,7 @@
       stuDailyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: dayNames.map(d => d.replace('星期', '週')),
+          labels: labelsWithDate,
           datasets: [
             {
               type: 'line',
@@ -923,7 +1170,7 @@
             },
             {
               type: 'bar',
-              label: `${exObj.name} 完成數量（${exObj.unit}）`,
+              label: `${exObj.name} 完成（${exObj.unit}）`,
               data: dailyValues,
               backgroundColor: '#10b981',
               borderRadius: 8
@@ -932,20 +1179,21 @@
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
             y: {
               beginAtZero: true,
-              title: { display: true, text: `數量（單位：${exObj.unit}）`, font: { weight: 'bold' } }
+              title: { display: true, text: `單位：${exObj.unit}`, font: { weight: 'bold' } }
             }
           }
         }
       });
     }
 
-    // 共用成長曲線繪製函數（供學員自己及教練檢視學員時使用）
     function drawGrowthCurveOnCanvas(canvasId, logsByWeekMap, metricKey, existingChartRef) {
       const ctx = document.getElementById(canvasId);
-      const weeksAsc = getRecentWeeksList(Object.keys(logsByWeekMap)).sort(); // 由舊至新排列
+      const weeksAsc = getRecentWeeksList(Object.keys(logsByWeekMap)).sort();
+      const weekLabels = weeksAsc.map(w => getDayDateInfo(w, 0).ddmm + "週");
 
       if (existingChartRef) existingChartRef.destroy();
 
@@ -959,7 +1207,7 @@
         return new Chart(ctx, {
           type: 'line',
           data: {
-            labels: weeksAsc.map(w => w.slice(5) + "週"),
+            labels: weekLabels,
             datasets: [
               {
                 label: '每週獲得星數（日）',
@@ -985,18 +1233,18 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
               y: {
                 min: 0,
                 max: 7,
                 ticks: { stepSize: 1 },
-                title: { display: true, text: '獲得星數（0 - 7 星）', font: { weight: 'bold' } }
+                title: { display: true, text: '星數 (0-7)', font: { weight: 'bold' } }
               }
             }
           }
         });
       } else {
-        // 特定動作的跨週進步曲線（顯示該週單日最高表現 & 打卡日平均表現）
         const exObj = exerciseCatalog[metricKey] || { id: metricKey, name: "動作", target: 20, unit: "下" };
         const maxPerWeek = [];
         const avgPerWeek = [];
@@ -1022,10 +1270,10 @@
         return new Chart(ctx, {
           type: 'line',
           data: {
-            labels: weeksAsc.map(w => w.slice(5) + "週"),
+            labels: weekLabels,
             datasets: [
               {
-                label: `${exObj.name} 單日最高表現（${exObj.unit}）`,
+                label: `${exObj.name} 單日最高（${exObj.unit}）`,
                 data: maxPerWeek,
                 borderColor: '#2563eb',
                 backgroundColor: 'rgba(37, 99, 235, 0.15)',
@@ -1035,7 +1283,7 @@
                 tension: 0.25
               },
               {
-                label: `${exObj.name} 打卡日平均（${exObj.unit}）`,
+                label: `${exObj.name} 平均（${exObj.unit}）`,
                 data: avgPerWeek,
                 borderColor: '#10b981',
                 borderWidth: 2,
@@ -1048,10 +1296,11 @@
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             scales: {
               y: {
                 beginAtZero: true,
-                title: { display: true, text: `數量（單位：${exObj.unit}）`, font: { weight: 'bold' } }
+                title: { display: true, text: `單位：${exObj.unit}`, font: { weight: 'bold' } }
               }
             }
           }
@@ -1066,61 +1315,127 @@
 
     function renderStudentHistoryList() {
       const container = document.getElementById("studentHistoryList");
-      const weeksDesc = Object.keys(studentLogsMap).sort().reverse();
-
-      if (weeksDesc.length === 0) {
-        container.innerHTML = `<p class="text-center text-slate-400 py-6 font-bold">暫時未有歷史打卡紀錄，快啲開始今個星期嘅訓練啦 💪🏻</p>`;
-        return;
-      }
+      const weeksDesc = getRecentWeeksList(Object.keys(studentLogsMap));
 
       container.innerHTML = weeksDesc.map(wId => {
         const daysObj = studentLogsMap[wId] || {};
         const stars = Object.values(daysObj).filter(d => d && d.completed).length;
         const badge = getBadgeInfo(stars);
+        const rangeStr = formatWeekRangeHK(wId);
         return `
-          <div data-jumpweek="${wId}" class="stu-jump-week cursor-pointer bg-slate-50 hover:bg-emerald-50 border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div data-jumpweek="${wId}" class="stu-jump-week cursor-pointer bg-slate-50 hover:bg-emerald-50 border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-3.5 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div>
-              <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">${wId} 週（星期日起）</span>
-              <h4 class="text-base font-black text-slate-800 mt-1.5">${badge.title}</h4>
-              <p class="text-xs text-slate-500 mt-0.5">點擊查看當週每日運動數量明細 ➡️</p>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">📅 ${rangeStr}</span>
+                ${wId === thisWeekId ? '<span class="text-xs font-black bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">本週</span>' : ''}
+              </div>
+              <h4 class="text-sm sm:text-base font-black text-slate-800 mt-1.5">${badge.title}</h4>
+              <p class="text-xs text-slate-500 mt-0.5">點擊跳轉查看該週每日打卡紀錄 ➡️</p>
             </div>
-            <div class="text-2xl tracking-wider">${badge.stars}</div>
+            <div class="text-xl sm:text-2xl tracking-wider">${badge.stars}</div>
           </div>
         `;
       }).join("");
     }
 
+    // ==================== 成就系統：分為「每週成就表 (每週刷新)」與「歷史成就表 (永不刷新)」及「歷週成就紀錄」 ====================
     function renderStudentAchievements() {
-      let maxWeeklyStars = 0;
-      let totalStars = 0;
-
+      // 1. 計算歷史總星數（永久累積，不刷新）
+      let totalStarsAllTime = 0;
       Object.values(studentLogsMap).forEach(daysObj => {
-        const s = Object.values(daysObj || {}).filter(d => d && d.completed).length;
-        if (s > maxWeeklyStars) maxWeeklyStars = s;
-        totalStars += s;
+        totalStarsAllTime += Object.values(daysObj || {}).filter(d => d && d.completed).length;
       });
 
-      const container = document.getElementById("studentAchievementsGrid");
-      container.innerHTML = achievementsList.map(ach => {
-        const currentVal = ach.type === "weekly_stars" ? maxWeeklyStars : totalStars;
-        const unlocked = currentVal >= ach.target;
-        const progressPct = Math.min(100, Math.round((currentVal / ach.target) * 100));
+      // 2. 計算當前選擇查看之週次的星數（預設為本週 thisWeekId，每週日刷新歸零重新挑戰）
+      const targetWeekDays = studentLogsMap[selectedAchWeekId] || {};
+      const targetWeekStars = Object.values(targetWeekDays).filter(d => d && d.completed).length;
 
+      // 更新成就頁週次下拉選單文字
+      const achWeekSel = document.getElementById("achWeekFilterSelect");
+      if (achWeekSel) {
+        const weeks = getRecentWeeksList(Object.keys(studentLogsMap));
+        achWeekSel.innerHTML = weeks.map(w => {
+          const rangeStr = formatWeekRangeHK(w);
+          const s = Object.values(studentLogsMap[w] || {}).filter(d => d && d.completed).length;
+          return `<option value="${w}" ${w === selectedAchWeekId ? 'selected' : ''}>${rangeStr} ${w === thisWeekId ? '【本週】' : ''} (${s}星)</option>`;
+        }).join("");
+      }
+
+      const weeklyAchs = achievementsList.filter(a => a.type === "weekly_stars");
+      const historicalAchs = achievementsList.filter(a => a.type === "total_stars");
+
+      // 渲染 A：每週成就表
+      const weeklyGrid = document.getElementById("weeklyAchievementsGrid");
+      weeklyGrid.innerHTML = weeklyAchs.map(ach => {
+        const unlocked = targetWeekStars >= ach.target;
+        const progressPct = Math.min(100, Math.round((targetWeekStars / ach.target) * 100));
         return `
-          <div class="rounded-2xl p-4 border-2 transition flex items-start gap-3.5 ${unlocked ? 'bg-gradient-to-br from-amber-50 to-yellow-100 border-amber-400 shadow-md' : 'bg-slate-100 border-slate-200 opacity-75'}">
-            <div class="text-4xl p-2.5 rounded-2xl ${unlocked ? 'bg-amber-200/70' : 'bg-slate-200 grayscale'}">${ach.icon}</div>
-            <div class="flex-1">
-              <div class="flex justify-between items-center">
-                <h4 class="font-black text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${ach.title}</h4>
-                <span class="text-xs font-extrabold px-2 py-0.5 rounded-full ${unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">
-                  ${unlocked ? '✅ 已達成' : `${currentVal} / ${ach.target} 星`}
+          <div class="rounded-2xl p-3.5 sm:p-4 border-2 transition flex items-start gap-3 ${unlocked ? 'bg-gradient-to-br from-amber-50 to-yellow-100 border-amber-400 shadow-md' : 'bg-slate-50 border-slate-200 opacity-80'}">
+            <div class="text-3xl sm:text-4xl p-2 rounded-2xl shrink-0 ${unlocked ? 'bg-amber-200/80' : 'bg-slate-200 grayscale'}">${ach.icon}</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-start gap-1">
+                <h4 class="font-black text-sm sm:text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${ach.title}</h4>
+                <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">
+                  ${unlocked ? '✅ 已達成' : `${targetWeekStars}/${ach.target}星`}
                 </span>
               </div>
               <p class="text-xs font-bold mt-1 ${unlocked ? 'text-amber-900' : 'text-slate-500'}">${ach.desc}</p>
-              <div class="w-full bg-white/80 h-2 rounded-full mt-2.5 overflow-hidden border border-slate-200">
+              <div class="w-full bg-white/80 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
                 <div class="h-full ${unlocked ? 'bg-emerald-500' : 'bg-amber-400'}" style="width: ${progressPct}%"></div>
               </div>
             </div>
+          </div>
+        `;
+      }).join("");
+
+      // 渲染 B：歷史累積成就表（永不刷新）
+      const histGrid = document.getElementById("historicalAchievementsGrid");
+      histGrid.innerHTML = historicalAchs.map(ach => {
+        const unlocked = totalStarsAllTime >= ach.target;
+        const progressPct = Math.min(100, Math.round((totalStarsAllTime / ach.target) * 100));
+        return `
+          <div class="rounded-2xl p-3.5 sm:p-4 border-2 transition flex items-start gap-3 ${unlocked ? 'bg-gradient-to-br from-indigo-50 to-blue-100 border-indigo-400 shadow-md' : 'bg-slate-50 border-slate-200 opacity-80'}">
+            <div class="text-3xl sm:text-4xl p-2 rounded-2xl shrink-0 ${unlocked ? 'bg-indigo-200/80' : 'bg-slate-200 grayscale'}">${ach.icon}</div>
+            <div class="flex-1 min-w-0">
+              <div class="flex justify-between items-start gap-1">
+                <h4 class="font-black text-sm sm:text-base ${unlocked ? 'text-indigo-950' : 'text-slate-600'}">${ach.title}</h4>
+                <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${unlocked ? 'bg-indigo-600 text-white' : 'bg-slate-300 text-slate-700'}">
+                  ${unlocked ? '🏆 永久解鎖' : `累計 ${totalStarsAllTime}/${ach.target}星`}
+                </span>
+              </div>
+              <p class="text-xs font-bold mt-1 ${unlocked ? 'text-indigo-900' : 'text-slate-500'}">${ach.desc}</p>
+              <div class="w-full bg-white/80 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
+                <div class="h-full ${unlocked ? 'bg-indigo-600' : 'bg-indigo-400'}" style="width: ${progressPct}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      // 渲染 C：學員過往每週成就榮譽榜（讓學員清楚看到自己過去每一週拿過哪些每週成就）
+      const timelineEl = document.getElementById("pastWeeklyBadgesTimeline");
+      const allWeeksDesc = getRecentWeeksList(Object.keys(studentLogsMap));
+
+      timelineEl.innerHTML = allWeeksDesc.map(wId => {
+        const s = Object.values(studentLogsMap[wId] || {}).filter(d => d && d.completed).length;
+        const rangeStr = formatWeekRangeHK(wId);
+        const earnedWeeklyBadges = weeklyAchs.filter(a => s >= a.target);
+
+        const badgesPills = earnedWeeklyBadges.length > 0
+          ? earnedWeeklyBadges.map(a => `<span class="inline-flex items-center gap-1 bg-amber-100 border border-amber-300 text-amber-950 text-xs font-black px-2.5 py-1 rounded-xl">${a.icon} ${a.title}</span>`).join(" ")
+          : `<span class="text-xs text-slate-400 font-bold">該週累積 ${s} 粒星（未滿 4 星獎章門檻）</span>`;
+
+        return `
+          <div data-viewachweek="${wId}" class="ach-history-row cursor-pointer p-3.5 rounded-2xl border-2 transition flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 ${wId === selectedAchWeekId ? 'bg-amber-50/70 border-amber-400' : 'bg-slate-50 border-slate-200 hover:border-amber-300'}">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-black text-slate-700 bg-white px-2.5 py-0.5 rounded-lg border">📅 ${rangeStr}</span>
+                ${wId === thisWeekId ? '<span class="text-[11px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full">本週進行中</span>' : ''}
+                <span class="text-xs font-extrabold text-amber-800">🌟 ${s} / 7 星</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5 pt-1">${badgesPills}</div>
+            </div>
+            <span class="text-xs font-bold text-emerald-700 shrink-0">點擊檢視該週成就 👆</span>
           </div>
         `;
       }).join("");
@@ -1147,7 +1462,7 @@
       const weeks = getRecentWeeksList();
       const admSelect = document.getElementById("adminWeekSelect");
       admSelect.innerHTML = weeks.map(w => 
-        `<option value="${w}">${w} 週（星期日起）${w === thisWeekId ? '【本週】' : ''}</option>`
+        `<option value="${w}">${formatWeekRangeHK(w)}（${w === thisWeekId ? '本週' : w}）</option>`
       ).join("");
 
       populateExerciseSelectors();
@@ -1159,31 +1474,29 @@
 
     async function loadAdminUsersAndSecrets() {
       requireAdmin();
-      const [uSnap, sSnap] = await Promise.all([
+      const [uSnap, sSnap] = await withRetry(() => Promise.all([
         getDocs(collection(db, "users")),
         getDocs(collection(db, "user_secrets"))
-      ]);
+      ]));
       adminUsersList = [];
       uSnap.forEach(d => adminUsersList.push({ id: d.id, ...d.data() }));
       adminSecretsMap = {};
       sSnap.forEach(d => { adminSecretsMap[d.id] = d.data().passwordPlain; });
     }
 
-    // 按需只查詢指定週次的打卡紀錄，並只列出學員 (role === 'student')
     async function loadAdminWeekOverview(wId) {
       requireAdmin();
       selectedWeekId = wId;
       await loadScheduleForWeek(wId);
 
       const q = query(collection(db, "logs"), where("weekId", "==", wId));
-      const snap = await getDocs(q);
+      const snap = await withRetry(() => getDocs(q));
       adminWeekLogsMap = {};
       snap.forEach(d => {
         const data = d.data();
         adminWeekLogsMap[data.userId] = data.days || {};
       });
 
-      // 嚴格過濾只顯示學員（排除教練 Admin 自己）
       const studentsOnly = adminUsersList.filter(u => u.role === "student");
       const container = document.getElementById("allStudentsTable");
 
@@ -1197,19 +1510,19 @@
         const stars = Object.values(uDays).filter(d => d && d.completed).length;
         const badge = getBadgeInfo(stars);
         return `
-          <div class="border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 transition">
-            <div>
-              <div class="flex items-center flex-wrap gap-2">
-                <span class="text-lg font-black text-slate-900">${u.chineseName}</span>
+          <div class="border-2 border-slate-200 hover:border-emerald-400 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 transition">
+            <div class="min-w-0">
+              <div class="flex items-center flex-wrap gap-1.5 sm:gap-2">
+                <span class="text-base sm:text-lg font-black text-slate-900">${u.chineseName}</span>
                 <span class="text-xs text-slate-500">(@${u.username} / 📞 ${u.phone})</span>
-                <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">本週：${stars} / 7 日</span>
+                <span class="text-xs font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">該週：${stars} / 7 日</span>
               </div>
               <div class="text-xs font-bold text-amber-800 mt-1">${badge.title}</div>
             </div>
-            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-              <span class="text-xl tracking-wider">${badge.stars}</span>
-              <button data-inspectuid="${u.id}" class="btn-inspect-student bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3.5 py-2.5 rounded-xl shadow shrink-0">
-                📈 成長曲線／修改紀錄
+            <div class="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+              <span class="text-lg sm:text-xl tracking-wider">${badge.stars}</span>
+              <button data-inspectuid="${u.id}" class="btn-inspect-student bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow shrink-0">
+                📈 成長曲線／代改
               </button>
             </div>
           </div>
@@ -1217,28 +1530,32 @@
       }).join("");
     }
 
-    // 教練點擊學員：載入該學員歷週紀錄、畫出成長曲線、並提供代改介面
     async function openStudentInspector(uid) {
       requireAdmin();
       inspectedStudent = adminUsersList.find(u => u.id === uid);
       if (!inspectedStudent) return;
 
-      const q = query(collection(db, "logs"), where("userId", "==", uid));
-      const snap = await getDocs(q);
-      inspectedStudentLogs = {};
-      snap.forEach(d => {
-        const data = d.data();
-        if (data.weekId) inspectedStudentLogs[data.weekId] = data.days || {};
-      });
+      showLoading(`正在載入 ${inspectedStudent.chineseName} 的完整紀錄...`);
+      try {
+        const q = query(collection(db, "logs"), where("userId", "==", uid));
+        const snap = await withRetry(() => getDocs(q));
+        inspectedStudentLogs = {};
+        snap.forEach(d => {
+          const data = d.data();
+          if (data.weekId) inspectedStudentLogs[data.weekId] = data.days || {};
+        });
 
-      document.getElementById("inspectorTitle").innerText = `🏃🏻‍♂️ ${inspectedStudent.chineseName}（@${inspectedStudent.username}）的成長曲線與紀錄修正`;
-      document.getElementById("coachEditWeekLabel").innerText = `目前編輯週次：${selectedWeekId}（星期日起計 7 日）— 如需改其他週次，請先在上方切換週次`;
-      document.getElementById("coachStudentInspector").classList.remove("hidden");
+        document.getElementById("inspectorTitle").innerText = `🏃🏻‍♂️ ${inspectedStudent.chineseName}（@${inspectedStudent.username}）`;
+        document.getElementById("coachEditWeekLabel").innerText = `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
+        document.getElementById("coachStudentInspector").classList.remove("hidden");
 
-      coachSelectedDayIdx = 0;
-      renderCoachStudentGrowthChart();
-      renderCoachStudentEditor();
-      document.getElementById("coachStudentInspector").scrollIntoView({ behavior: "smooth" });
+        coachSelectedDayIdx = (selectedWeekId === thisWeekId) ? todayDayIndex : 0;
+        renderCoachStudentGrowthChart();
+        renderCoachStudentEditor();
+        document.getElementById("coachStudentInspector").scrollIntoView({ behavior: "smooth" });
+      } finally {
+        hideLoading();
+      }
     }
 
     function renderCoachStudentGrowthChart() {
@@ -1247,18 +1564,21 @@
       coachGrowthChartInstance = drawGrowthCurveOnCanvas("coachStudentGrowthChart", inspectedStudentLogs, metric, coachGrowthChartInstance);
     }
 
+    // 教練代改面板的 7 日按鈕同樣加上「日/月」與「今日」標籤
     function renderCoachStudentEditor() {
       if (!inspectedStudent) return;
       const weekDaysObj = inspectedStudentLogs[selectedWeekId] || {};
 
-      // 渲染星期日至星期六按鈕
-      document.getElementById("coachDayTabs").innerHTML = dayNames.map((dName, idx) => {
+      document.getElementById("coachDayTabs").innerHTML = shortDayNames.map((shortName, idx) => {
         const isDone = weekDaysObj[idx]?.completed;
         const isSelected = idx === coachSelectedDayIdx;
+        const dateInfo = getDayDateInfo(selectedWeekId, idx);
         return `
-          <button data-coachday="${idx}" class="coach-day-btn py-2 px-1 rounded-xl font-black text-xs sm:text-sm border-2 flex flex-col items-center ${isSelected ? 'bg-amber-600 text-white border-amber-700 shadow' : 'bg-white text-slate-700 border-slate-200'}">
-            <span>${dName.replace('星期','週')}</span>
-            <span class="text-base mt-0.5">${isDone ? '🌟' : '⚪'}</span>
+          <button data-coachday="${idx}" class="coach-day-btn py-1.5 sm:py-2 px-0.5 sm:px-1 rounded-xl font-black border-2 flex flex-col items-center min-w-0 ${isSelected ? 'bg-amber-600 text-white border-amber-700 shadow' : 'bg-white text-slate-700 border-slate-200'}">
+            <span class="text-[11px] sm:text-xs">${shortName}</span>
+            <span class="text-[10px] sm:text-xs font-extrabold ${isSelected ? 'text-amber-100' : 'text-slate-500'}">${dateInfo.ddmm}</span>
+            ${dateInfo.isToday ? `<span class="text-[9px] bg-emerald-600 text-white px-1 rounded-full mt-0.5">今日</span>` : ''}
+            <span class="text-sm sm:text-base mt-0.5">${isDone ? '🌟' : '⚪'}</span>
           </button>
         `;
       }).join("");
@@ -1268,14 +1588,14 @@
         const savedVal = getExerciseValueFromRecord(dayData, ex);
         const val = savedVal !== undefined ? savedVal : 0;
         return `
-          <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center">
-            <div>
-              <span class="font-black text-slate-800">${ex.name}</span>
-              <span class="text-xs text-slate-500 ml-2">（目標：${ex.target} ${ex.unit}）</span>
+          <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center gap-2">
+            <div class="min-w-0">
+              <span class="font-black text-slate-800 text-sm sm:text-base">${ex.name}</span>
+              <span class="text-xs text-slate-500 block sm:inline sm:ml-2">（目標：${ex.target} ${ex.unit}）</span>
             </div>
-            <div class="flex items-center gap-2">
-              <input type="number" id="coach_ex_input_${ex.id}" value="${val}" min="0" class="w-24 p-2 text-center font-black border-2 border-amber-400 rounded-xl">
-              <span class="text-sm font-bold text-slate-600">${ex.unit}</span>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <input type="number" id="coach_ex_input_${ex.id}" value="${val}" min="0" class="w-20 sm:w-24 p-2 text-center font-black border-2 border-amber-400 rounded-xl">
+              <span class="text-xs sm:text-sm font-bold text-slate-600">${ex.unit}</span>
             </div>
           </div>
         `;
@@ -1292,37 +1612,43 @@
         records[ex.id] = val;
       });
 
-      if (!inspectedStudentLogs[selectedWeekId]) inspectedStudentLogs[selectedWeekId] = {};
-      inspectedStudentLogs[selectedWeekId][coachSelectedDayIdx] = {
-        completed: markCompleted,
-        records: markCompleted ? records : {},
-        editedByCoachAt: formatLocalYMD(new Date())
-      };
+      showLoading("正在儲存學員紀錄修改...");
+      try {
+        if (!inspectedStudentLogs[selectedWeekId]) inspectedStudentLogs[selectedWeekId] = {};
+        inspectedStudentLogs[selectedWeekId][coachSelectedDayIdx] = {
+          completed: markCompleted,
+          records: markCompleted ? records : {},
+          editedByCoachAt: formatLocalYMD(new Date())
+        };
 
-      const logId = `${selectedWeekId}_${inspectedStudent.id}`;
-      await setDoc(doc(db, "logs", logId), {
-        userId: inspectedStudent.id,
-        weekId: selectedWeekId,
-        days: inspectedStudentLogs[selectedWeekId]
-      });
+        const logId = `${selectedWeekId}_${inspectedStudent.id}`;
+        await withRetry(() => setDoc(doc(db, "logs", logId), {
+          userId: inspectedStudent.id,
+          weekId: selectedWeekId,
+          days: inspectedStudentLogs[selectedWeekId]
+        }));
 
-      adminWeekLogsMap[inspectedStudent.id] = inspectedStudentLogs[selectedWeekId];
-      alert(`✅ 已由教練更新【${inspectedStudent.chineseName}】於 ${dayNames[coachSelectedDayIdx]} 的紀錄！`);
-      renderCoachStudentEditor();
-      renderCoachStudentGrowthChart();
-      await loadAdminWeekOverview(selectedWeekId);
+        adminWeekLogsMap[inspectedStudent.id] = inspectedStudentLogs[selectedWeekId];
+        const dInfo = getDayDateInfo(selectedWeekId, coachSelectedDayIdx);
+        showToast(`✅ 已更新【${inspectedStudent.chineseName}】於 ${shortDayNames[coachSelectedDayIdx]} (${dInfo.ddmm}) 的紀錄！`);
+        renderCoachStudentEditor();
+        renderCoachStudentGrowthChart();
+        await loadAdminWeekOverview(selectedWeekId);
+      } finally {
+        hideLoading();
+      }
     }
 
-    // 匯出該週全隊 CSV 報表（含 UTF-8 BOM 完美支援 Excel 中文）
     function exportWeeklyCSV() {
       requireAdmin();
       const studentsOnly = adminUsersList.filter(u => u.role === "student");
-      if (studentsOnly.length === 0) return alert("目前沒有學員資料可匯出！");
+      if (studentsOnly.length === 0) return showToast("目前沒有學員資料可匯出！", true);
 
+      const dayHeadersWithDate = [0, 1, 2, 3, 4, 5, 6].map(dIdx => `${dayNames[dIdx]}(${getDayDateInfo(selectedWeekId, dIdx).ddmm})`);
       const exHeaders = currentSchedule.map(ex => `${ex.name}本週總計(${ex.unit})`);
       const headers = [
-        "週次(星期日起)", "中文姓名", "帳號名稱", "電話號碼", "本週得星數", "達成獎章",
-        ...dayNames,
+        "週次範圍(日/月)", "中文姓名", "帳號名稱", "電話號碼", "本週得星數", "達成每週獎章",
+        ...dayHeadersWithDate,
         ...exHeaders
       ];
 
@@ -1331,7 +1657,6 @@
         const stars = Object.values(uDays).filter(d => d && d.completed).length;
         const badge = getBadgeInfo(stars).shortBadge;
 
-        // 星期日至星期六每日摘要
         const dayCells = [0, 1, 2, 3, 4, 5, 6].map(dIdx => {
           const dObj = uDays[dIdx];
           if (!dObj || !dObj.completed) return "未打卡";
@@ -1342,7 +1667,6 @@
           return `🌟已完成(${parts.join(" / ")})`;
         });
 
-        // 各項動作本週總計
         const exTotals = currentSchedule.map(ex => {
           return [0, 1, 2, 3, 4, 5, 6].reduce((sum, dIdx) => {
             const dObj = uDays[dIdx];
@@ -1352,7 +1676,7 @@
         });
 
         return [
-          selectedWeekId, u.chineseName, u.username, u.phone, stars, badge,
+          formatWeekRangeHK(selectedWeekId), u.chineseName, u.username, u.phone, stars, badge,
           ...dayCells,
           ...exTotals
         ].map(cell => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(",");
@@ -1370,16 +1694,15 @@
       URL.revokeObjectURL(url);
     }
 
-    // 教練課表編輯器（支援直接改名而不改變固定 ID）
     function renderScheduleEditor() {
       const container = document.getElementById("scheduleEditorList");
       container.innerHTML = currentSchedule.map((ex, i) => `
-        <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-          <div class="flex items-center gap-2 flex-1">
-            <span class="text-xs font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold shrink-0" title="永久固定ID">${ex.id}</span>
-            <input type="text" id="editExName_${i}" value="${ex.name}" class="flex-1 p-2 border rounded-xl bg-white font-black text-slate-800" title="修改名稱不會影響歷史紀錄">
-            <input type="number" id="editExTarget_${i}" value="${ex.target}" class="w-20 p-2 border rounded-xl bg-white font-bold text-center" title="目標數量">
-            <input type="text" id="editExUnit_${i}" value="${ex.unit}" class="w-16 p-2 border rounded-xl bg-white font-bold text-center" title="單位">
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+          <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1">
+            <span class="text-xs font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold shrink-0">${ex.id}</span>
+            <input type="text" id="editExName_${i}" value="${ex.name}" class="flex-1 min-w-[140px] p-2 border rounded-xl bg-white font-black text-slate-800">
+            <input type="number" id="editExTarget_${i}" value="${ex.target}" class="w-20 p-2 border rounded-xl bg-white font-bold text-center">
+            <input type="text" id="editExUnit_${i}" value="${ex.unit}" class="w-16 p-2 border rounded-xl bg-white font-bold text-center">
           </div>
           <button data-remex="${i}" class="btn-remove-ex bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold shrink-0">🗑️ 移除</button>
         </div>
@@ -1388,43 +1711,50 @@
 
     async function saveWeeklySchedule() {
       requireAdmin();
-      // 讀取教練在輸入框直接修改的名稱、目標與單位（保留原 ex.id）
-      currentSchedule = currentSchedule.map((ex, i) => {
-        const updated = {
-          id: ex.id,
-          name: document.getElementById(`editExName_${i}`)?.value.trim() || ex.name,
-          target: parseInt(document.getElementById(`editExTarget_${i}`)?.value) || ex.target,
-          unit: document.getElementById(`editExUnit_${i}`)?.value.trim() || ex.unit
-        };
-        exerciseCatalog[ex.id] = updated;
-        return updated;
-      });
+      showLoading("正在發佈課表...");
+      try {
+        currentSchedule = currentSchedule.map((ex, i) => {
+          const updated = {
+            id: ex.id,
+            name: document.getElementById(`editExName_${i}`)?.value.trim() || ex.name,
+            target: parseInt(document.getElementById(`editExTarget_${i}`)?.value) || ex.target,
+            unit: document.getElementById(`editExUnit_${i}`)?.value.trim() || ex.unit
+          };
+          exerciseCatalog[ex.id] = updated;
+          return updated;
+        });
 
-      await Promise.all([
-        setDoc(doc(db, "schedules", selectedWeekId), { exercises: currentSchedule }),
-        setDoc(doc(db, "schedules", "default"), { exercises: currentSchedule }),
-        setDoc(doc(db, "settings", "exercise_catalog"), { catalog: exerciseCatalog })
-      ]);
+        await withRetry(() => Promise.all([
+          setDoc(doc(db, "schedules", selectedWeekId), { exercises: currentSchedule }),
+          setDoc(doc(db, "schedules", "default"), { exercises: currentSchedule }),
+          setDoc(doc(db, "settings", "exercise_catalog"), { catalog: exerciseCatalog })
+        ]));
 
-      populateExerciseSelectors();
-      renderScheduleEditor();
-      alert(`✅ 已儲存並發佈課表（所有動作 ID 保持穩定，歷史數據與圖表已自動同步新名稱）！`);
+        populateExerciseSelectors();
+        renderScheduleEditor();
+        showToast("✅ 已成功儲存並發佈本週課表！");
+      } finally {
+        hideLoading();
+      }
     }
 
-    // 教練管理成就表
     function renderAdminAchievements() {
       const container = document.getElementById("adminAchievementsList");
       container.innerHTML = achievementsList.map((ach, idx) => `
-        <div class="border-2 border-slate-200 rounded-2xl p-4 bg-slate-50 space-y-2">
-          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
-            <input type="text" id="editAchIcon_${idx}" value="${ach.icon}" class="p-2 border rounded-xl bg-white font-bold text-center sm:col-span-1">
+        <div class="border-2 border-slate-200 rounded-2xl p-3.5 bg-slate-50 space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
+            <input type="text" id="editAchIcon_${idx}" value="${ach.icon}" class="p-2 border rounded-xl bg-white font-bold text-center">
             <input type="text" id="editAchTitle_${idx}" value="${ach.title}" class="p-2 border rounded-xl bg-white font-bold sm:col-span-2">
-            <input type="number" id="editAchTarget_${idx}" value="${ach.target}" class="p-2 border rounded-xl bg-white font-bold">
+            <select id="editAchType_${idx}" class="p-2 border rounded-xl bg-white font-bold text-xs">
+              <option value="weekly_stars" ${ach.type === 'weekly_stars' ? 'selected' : ''}>🔄 每週成就 (每週刷新)</option>
+              <option value="total_stars" ${ach.type === 'total_stars' ? 'selected' : ''}>♾️ 歷史成就 (永久累積)</option>
+            </select>
+            <input type="number" id="editAchTarget_${idx}" value="${ach.target}" class="p-2 border rounded-xl bg-white font-bold text-center" title="目標星數">
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
             <input type="text" id="editAchDesc_${idx}" value="${ach.desc}" class="flex-1 p-2 border rounded-xl bg-white text-sm font-medium">
             <div class="flex gap-2 shrink-0">
-              <button data-saveach="${idx}" class="btn-save-ach bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl">💾 儲存修改</button>
+              <button data-saveach="${idx}" class="btn-save-ach flex-1 sm:flex-initial bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl">💾 儲存修改</button>
               <button data-delach="${idx}" class="btn-del-ach bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl">🗑️ 刪除</button>
             </div>
           </div>
@@ -1432,34 +1762,33 @@
       `).join("");
     }
 
-    // 教練管理用戶名單與密碼（從 user_secrets 讀取明文密碼供教練支援）
     function renderUserAdminList() {
       requireAdmin();
       const sortedUsers = [...adminUsersList].sort((a, b) => (b.needHelp ? 1 : 0) - (a.needHelp ? 1 : 0));
       const container = document.getElementById("userAdminList");
 
       container.innerHTML = sortedUsers.map(u => {
-        const plainPwd = adminSecretsMap[u.id] || u.password || "（已加密，可按右側重設）";
+        const plainPwd = adminSecretsMap[u.id] || u.password || "（可按右側重設）";
         return `
-          <div class="border-2 rounded-2xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
-            <div>
+          <div class="border-2 rounded-2xl p-3.5 sm:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
+            <div class="min-w-0">
               <div class="flex items-center flex-wrap gap-2">
-                <span class="text-lg font-black text-slate-900">${u.chineseName}</span>
+                <span class="text-base sm:text-lg font-black text-slate-900">${u.chineseName}</span>
                 <span class="text-xs px-2.5 py-0.5 rounded-full font-bold ${u.role === 'admin' ? 'bg-purple-200 text-purple-900' : 'bg-slate-200 text-slate-700'}">
-                  ${u.role === 'admin' ? '教練/管理員 (Admin)' : '學員'}
+                  ${u.role === 'admin' ? '教練 (Admin)' : '學員'}
                 </span>
                 ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ 忘記密碼求助中！</span>` : ''}
               </div>
-              <div class="text-xs sm:text-sm text-slate-600 mt-1 space-x-3">
+              <div class="text-xs sm:text-sm text-slate-600 mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 <span>帳號：<strong>${u.username}</strong></span>
                 <span>電話：<strong>${u.phone}</strong></span>
-                <span>密碼（僅教練可見）：<strong class="text-emerald-700 text-base bg-emerald-50 px-2 py-0.5 rounded">${plainPwd}</strong></span>
+                <span>密碼：<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">${plainPwd}</strong></span>
               </div>
             </div>
             <div class="flex flex-wrap gap-2 w-full sm:w-auto">
               <button data-resetuid="${u.id}" data-resetname="${u.chineseName}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">🔑 幫佢改密碼</button>
               <button data-roleuid="${u.id}" data-currole="${u.role}" class="btn-admin-togglerole flex-1 sm:flex-initial bg-purple-600 hover:bg-purple-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
-                ${u.role === 'admin' ? '⬇️ 轉回學員' : '⬆️ 轉為管理員'}
+                ${u.role === 'admin' ? '⬇️ 轉回學員' : '⬆️ 轉為教練'}
               </button>
             </div>
           </div>
@@ -1467,11 +1796,14 @@
       }).join("");
     }
 
-    // ==================== 5. 綁定所有事件監聽器（不暴露任何 window 全域函數） ====================
+    // ==================== 5. 綁定所有事件監聽器 ====================
     document.getElementById("toggleLoginPwd").addEventListener("change", (e) => {
       document.getElementById("loginPassword").type = e.target.checked ? "text" : "password";
     });
     document.getElementById("btnLogin").addEventListener("click", handleLogin);
+    document.getElementById("loginPassword").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLogin();
+    });
     document.getElementById("btnRegister").addEventListener("click", handleRegister);
     document.getElementById("btnForgotPwd").addEventListener("click", handleForgotPassword);
     document.getElementById("btnGoRegister").addEventListener("click", () => {
@@ -1482,15 +1814,45 @@
       document.getElementById("registerCard").classList.add("hidden");
       document.getElementById("loginCard").classList.remove("hidden");
     });
-    document.getElementById("btnLogout").addEventListener("click", () => location.reload());
 
-    // 學員端互動事件
-    document.getElementById("studentWeekSelect").addEventListener("change", async (e) => {
-      selectedWeekId = e.target.value;
-      await loadScheduleForWeek(selectedWeekId);
-      currentDayIndex = (selectedWeekId === thisWeekId) ? todayDayIndex : 0;
+    // 手動同步按鈕（無需重整頁面即可拉取最新資料）
+    document.getElementById("btnManualSync").addEventListener("click", async () => {
+      if (!currentUser) return;
+      await enterApp();
+      showToast("✅ 已同步最新資料！");
+    });
+
+    // 登出按鈕（唯一會清除自動登入 Session 的地方）
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      clearUserSession();
+      currentUser = null;
+      location.reload();
+    });
+
+    // 學員端返回本週按鈕
+    const jumpToThisWeekHandler = async () => {
+      selectedWeekId = thisWeekId;
+      document.getElementById("studentWeekSelect").value = thisWeekId;
+      await loadScheduleForWeek(thisWeekId);
+      currentDayIndex = todayDayIndex;
       populateExerciseSelectors();
       renderStudentWeekView();
+      showToast("📅 已返回本週打卡畫面！");
+    };
+    document.getElementById("btnJumpThisWeek").addEventListener("click", jumpToThisWeekHandler);
+    document.getElementById("btnJumpThisWeekDesktop").addEventListener("click", jumpToThisWeekHandler);
+
+    document.getElementById("studentWeekSelect").addEventListener("change", async (e) => {
+      selectedWeekId = e.target.value;
+      showLoading("正在載入該週課表與紀錄...");
+      try {
+        await loadScheduleForWeek(selectedWeekId);
+        currentDayIndex = (selectedWeekId === thisWeekId) ? todayDayIndex : 0;
+        populateExerciseSelectors();
+        renderStudentWeekView();
+      } finally {
+        hideLoading();
+      }
     });
 
     document.getElementById("dayTabs").addEventListener("click", (e) => {
@@ -1533,6 +1895,20 @@
       switchStudentTab("workout");
     });
 
+    // 學員成就頁：切換查看不同週次的「每週成就」
+    document.getElementById("achWeekFilterSelect").addEventListener("change", (e) => {
+      selectedAchWeekId = e.target.value;
+      renderStudentAchievements();
+    });
+
+    document.getElementById("pastWeeklyBadgesTimeline").addEventListener("click", (e) => {
+      const row = e.target.closest(".ach-history-row");
+      if (!row) return;
+      selectedAchWeekId = row.getAttribute("data-viewachweek");
+      renderStudentAchievements();
+      document.getElementById("achWeekFilterSelect").scrollIntoView({ behavior: "smooth" });
+    });
+
     document.querySelectorAll(".stu-nav-btn").forEach(btn => {
       btn.addEventListener("click", () => switchStudentTab(btn.getAttribute("data-stutab")));
     });
@@ -1548,17 +1924,22 @@
         document.querySelectorAll(".adm-nav-btn").forEach(b => {
           const isTarget = b.getAttribute("data-admtab") === tab;
           b.className = isTarget
-            ? "adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-3 rounded-xl text-xs sm:text-sm shadow"
-            : "adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm";
+            ? "adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-2 rounded-xl text-xs sm:text-sm shadow"
+            : "adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm";
         });
       });
     });
 
     document.getElementById("adminWeekSelect").addEventListener("change", async (e) => {
-      await loadAdminWeekOverview(e.target.value);
-      if (inspectedStudent) {
-        document.getElementById("coachEditWeekLabel").innerText = `目前編輯週次：${selectedWeekId}（星期日起計 7 日）`;
-        renderCoachStudentEditor();
+      showLoading("正在切換週次資料...");
+      try {
+        await loadAdminWeekOverview(e.target.value);
+        if (inspectedStudent) {
+          document.getElementById("coachEditWeekLabel").innerText = `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
+          renderCoachStudentEditor();
+        }
+      } finally {
+        hideLoading();
       }
     });
 
@@ -1593,7 +1974,7 @@
       const name = document.getElementById("newExName").value.trim();
       const target = parseInt(document.getElementById("newExTarget").value) || 10;
       const unit = document.getElementById("newExUnit").value.trim() || "下";
-      if (!name) return alert("請輸入動作名稱！");
+      if (!name) return showToast("請輸入動作名稱！", true);
       const newId = "ex_" + Date.now();
       const newEx = { id: newId, name, target, unit };
       exerciseCatalog[newId] = newEx;
@@ -1621,13 +2002,13 @@
       const type = document.getElementById("newAchType").value;
       const target = parseInt(document.getElementById("newAchTarget").value) || 4;
       const desc = document.getElementById("newAchDesc").value.trim();
-      if (!title || !desc) return alert("請填寫成就名稱及鼓勵字句！");
+      if (!title || !desc) return showToast("請填寫成就名稱及鼓勵字句！", true);
       achievementsList.push({ id: "ach_" + Date.now(), icon, title, type, target, desc });
-      await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
+      await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
       document.getElementById("newAchTitle").value = "";
       document.getElementById("newAchDesc").value = "";
       renderAdminAchievements();
-      alert("🎉 已成功新增成就！");
+      showToast("🎉 已成功新增成就！");
     });
 
     document.getElementById("adminAchievementsList").addEventListener("click", async (e) => {
@@ -1638,17 +2019,18 @@
         const idx = parseInt(saveBtn.getAttribute("data-saveach"));
         achievementsList[idx].icon = document.getElementById(`editAchIcon_${idx}`).value.trim() || "🏅";
         achievementsList[idx].title = document.getElementById(`editAchTitle_${idx}`).value.trim();
+        achievementsList[idx].type = document.getElementById(`editAchType_${idx}`).value;
         achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
         achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
-        await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
-        alert("✅ 已更新該項成就！");
+        await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+        showToast("✅ 已更新該項成就！");
         renderAdminAchievements();
       } else if (delBtn) {
         requireAdmin();
         const idx = parseInt(delBtn.getAttribute("data-delach"));
         if (!confirm(`確定要刪除「${achievementsList[idx].title}」嗎？`)) return;
         achievementsList.splice(idx, 1);
-        await setDoc(doc(db, "settings", "achievements"), { list: achievementsList });
+        await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
         renderAdminAchievements();
       }
     });
@@ -1664,25 +2046,33 @@
         const newPwd = prompt(`請為【${name}】輸入新密碼（幾多位數都可以）：`);
         if (!newPwd) return;
         const cleanPwd = newPwd.trim();
-        await Promise.all([
-          updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
-          setDoc(doc(db, "user_secrets", uid), { passwordPlain: cleanPwd })
-        ]);
-        alert(`✅ 已將【${name}】的密碼更新為：${cleanPwd}`);
-        await loadAdminUsersAndSecrets();
-        renderUserAdminList();
+        showLoading("正在重設密碼...");
+        try {
+          await withRetry(() => Promise.all([
+            updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
+            setDoc(doc(db, "user_secrets", uid), { passwordPlain: cleanPwd })
+          ]));
+          showToast(`✅ 已將【${name}】的密碼更新為：${cleanPwd}`);
+          await loadAdminUsersAndSecrets();
+          renderUserAdminList();
+        } finally {
+          hideLoading();
+        }
       } else if (roleBtn) {
         requireAdmin();
         const uid = roleBtn.getAttribute("data-roleuid");
         const curRole = roleBtn.getAttribute("data-currole");
         const newRole = curRole === "admin" ? "student" : "admin";
-        await updateDoc(doc(db, "users", uid), { role: newRole });
-        alert(`✅ 權限已更新為：${newRole === 'admin' ? '教練/管理員 (Admin)' : '學員'}`);
+        await withRetry(() => updateDoc(doc(db, "users", uid), { role: newRole }));
+        showToast(`✅ 權限已更新為：${newRole === 'admin' ? '教練 (Admin)' : '學員'}`);
         await loadAdminUsersAndSecrets();
         renderUserAdminList();
         await loadAdminWeekOverview(selectedWeekId);
       }
     });
+
+    // 啟動時自動檢查並恢復登入狀態
+    restoreSessionOnBoot();
   </script>
 </body>
 </html>
