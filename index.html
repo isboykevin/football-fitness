@@ -583,6 +583,10 @@
         
         <div id="scheduleEditorList" class="space-y-3 mb-5"></div>
         
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mb-3 text-xs sm:text-sm font-bold text-amber-900">
+          ⚠️ 課表編輯永遠只會套用到【本週】。切換上方「查看週次」不會改變編輯目標。
+        </div>
+
         <div class="bg-blue-50 p-3.5 sm:p-4 rounded-2xl border border-blue-200 mb-4">
           <h4 class="font-bold text-blue-900 text-sm mb-2">➕ 新增訓練動作項目</h4>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -785,18 +789,17 @@
       return clean ? `${prefix}_${clean}` : null;
     }
 
-    function addLookupIndexesToBatch(batch, userId, { username, phone, chineseName }) {
+    // 中文姓名不建立唯一索引（會撞名），只保留 username 與 phone 兩個唯一鍵
+    function addLookupIndexesToBatch(batch, userId, { username, phone }) {
       const uKey = normalizeLookupKey("u", username);
       const pKey = normalizeLookupKey("p", phone);
-      const nKey = normalizeLookupKey("n", chineseName);
       if (uKey) batch.set(doc(db, "user_lookup", uKey), { userId });
       if (pKey) batch.set(doc(db, "user_lookup", pKey), { userId });
-      if (nKey) batch.set(doc(db, "user_lookup", nKey), { userId });
     }
 
-    async function writeUserLookupIndexes(userId, { username, phone, chineseName }) {
+    async function writeUserLookupIndexes(userId, { username, phone }) {
       const batch = writeBatch(db);
-      addLookupIndexesToBatch(batch, userId, { username, phone, chineseName });
+      addLookupIndexesToBatch(batch, userId, { username, phone });
       await batch.commit().catch(e => console.warn("同步 user_lookup 索引略過：", e));
     }
 
@@ -866,7 +869,7 @@
     const SESSION_STORAGE_KEY = "sen_football_session_v4";
     const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v4";
     const SCHEDULES_CACHE_KEY = "sen_football_schedules_cache_v4";
-    const CACHE_TTL_MS = 60 * 60 * 1000;
+    const CACHE_TTL_MS = 5 * 60 * 1000;
 
     function showLoading(text = "正在連線同步資料...") {
       const overlay = document.getElementById("globalLoadingOverlay");
@@ -1096,6 +1099,16 @@
       h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
       h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
       return "h_" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+    }
+
+    // 防止用戶輸入的姓名／隊名／動作名 被當成 HTML 執行（XSS 防護）
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     // 授權碼系統已完全移除：新註冊一律為 student，職員權限由總教練在後台指派
@@ -1521,7 +1534,7 @@
       container.innerHTML = teamsList.map(t => `
         <label class="flex items-center gap-2.5 p-2.5 bg-white rounded-xl border-2 border-blue-200 hover:border-blue-400 cursor-pointer select-none transition">
           <input type="checkbox" value="${t.id}" class="reg-team-chk w-5 h-5 accent-blue-600 rounded">
-          <span class="font-black text-slate-800 text-xs sm:text-sm">🚩 ${t.name}</span>
+          <span class="font-black text-slate-800 text-xs sm:text-sm">🚩 ${escapeHtml(t.name)}</span>
         </label>
       `).join("");
     }
@@ -2042,8 +2055,8 @@
         return `
           <div class="bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2.5">
             <div class="text-center sm:text-left min-w-0 w-full sm:w-auto">
-              <span class="text-base sm:text-xl font-black text-slate-800 block">${ex.name}</span>
-              <span class="text-xs sm:text-sm text-emerald-700 font-bold block mt-0.5">🎯 建議目標：${ex.target} ${ex.unit}</span>
+              <span class="text-base sm:text-xl font-black text-slate-800 block">${escapeHtml(ex.name)}</span>
+              <span class="text-xs sm:text-sm text-emerald-700 font-bold block mt-0.5">🎯 建議目標：${ex.target} ${escapeHtml(ex.unit)}</span>
             </div>
             <div class="flex items-center justify-center gap-1.5 sm:gap-2 w-full sm:w-auto">
               <button type="button" data-adjidx="${i}" data-delta="-5" ${disabledAttr} class="stu-adj-btn bg-white border-2 border-slate-300 active:bg-slate-200 w-11 h-11 sm:w-12 sm:h-12 rounded-xl font-black text-base sm:text-lg shadow-sm disabled:opacity-40 shrink-0">-5</button>
@@ -2373,12 +2386,12 @@
             <div class="text-3xl sm:text-4xl p-2 rounded-2xl shrink-0 ${unlocked ? 'bg-amber-200/80' : 'bg-slate-200 grayscale'}">${ach.icon}</div>
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-start gap-1">
-                <h4 class="font-black text-sm sm:text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${ach.title}</h4>
+                <h4 class="font-black text-sm sm:text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${escapeHtml(ach.title)}</h4>
                 <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${unlocked ? 'bg-emerald-600 text-white' : 'bg-slate-300 text-slate-700'}">
                   ${unlocked ? '✅ 已達成' : `${targetWeekStars}/${ach.target}星`}
                 </span>
               </div>
-              <p class="text-xs font-bold mt-1 ${unlocked ? 'text-amber-900' : 'text-slate-500'}">${ach.desc}</p>
+              <p class="text-xs font-bold mt-1 ${unlocked ? 'text-amber-900' : 'text-slate-500'}">${escapeHtml(ach.desc)}</p>
               <div class="w-full bg-white/80 h-2 rounded-full mt-2 overflow-hidden border border-slate-200">
                 <div class="h-full ${unlocked ? 'bg-emerald-500' : 'bg-amber-400'}" style="width: ${progressPct}%"></div>
               </div>
@@ -2417,7 +2430,7 @@
         const earnedWeeklyBadges = weeklyAchs.filter(a => s >= a.target);
 
         const badgesPills = earnedWeeklyBadges.length > 0
-          ? earnedWeeklyBadges.map(a => `<span class="inline-flex items-center gap-1 bg-amber-100 border border-amber-300 text-amber-950 text-xs font-black px-2.5 py-1 rounded-xl">${a.icon} ${a.title}</span>`).join(" ")
+          ? earnedWeeklyBadges.map(a => `<span class="inline-flex items-center gap-1 bg-amber-100 border border-amber-300 text-amber-950 text-xs font-black px-2.5 py-1 rounded-xl">${escapeHtml(a.icon)} ${escapeHtml(a.title)}</span>`).join(" ")
           : `<span class="text-xs text-slate-400 font-bold">該週累積 ${s} 粒星（未滿 4 星獎章門檻）</span>`;
 
         return `
@@ -2674,8 +2687,8 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div class="min-w-0 space-y-1">
                 <div class="flex items-center flex-wrap gap-1.5">
-                  <span class="text-base sm:text-lg font-black text-slate-900">${user.chineseName}</span>
-                  <span class="text-xs font-bold text-slate-500">(@${user.username})</span>
+                  <span class="text-base sm:text-lg font-black text-slate-900">${escapeHtml(user.chineseName)}</span>
+                  <span class="text-xs font-bold text-slate-500">(@${escapeHtml(user.username)})</span>
                   <span class="text-xs font-black px-2.5 py-0.5 rounded-full ${isPassed ? 'bg-emerald-600 text-white' : 'bg-amber-100 text-amber-900'}">
                     ${badge.shortBadge}
                   </span>
@@ -2780,7 +2793,7 @@
         return `
           <div class="bg-white p-3 rounded-xl border border-amber-200 flex justify-between items-center gap-2">
             <div class="min-w-0">
-              <span class="font-black text-slate-800 text-sm sm:text-base">${ex.name}</span>
+              <span class="font-black text-slate-800 text-sm sm:text-base">${escapeHtml(ex.name)}</span>
               <span class="text-xs text-slate-500 block sm:inline sm:ml-2">（目標：${ex.target} ${ex.unit}）</span>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -2933,9 +2946,9 @@
         <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
           <div class="flex flex-wrap sm:flex-nowrap items-center gap-2 flex-1">
             <span class="text-xs font-mono bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold shrink-0">${ex.id}</span>
-            <input type="text" id="editExName_${i}" value="${ex.name}" class="flex-1 min-w-[140px] p-2 border rounded-xl bg-white font-black text-slate-800">
+            <input type="text" id="editExName_${i}" value="${escapeHtml(ex.name)}" class="flex-1 min-w-[140px] p-2 border rounded-xl bg-white font-black text-slate-800">
             <input type="number" id="editExTarget_${i}" value="${ex.target}" class="w-20 p-2 border rounded-xl bg-white font-bold text-center">
-            <input type="text" id="editExUnit_${i}" value="${ex.unit}" class="w-16 p-2 border rounded-xl bg-white font-bold text-center">
+            <input type="text" id="editExUnit_${i}" value="${escapeHtml(ex.unit)}" class="w-16 p-2 border rounded-xl bg-white font-bold text-center">
           </div>
           <button type="button" data-remex="${i}" class="btn-remove-ex bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-2 rounded-xl text-xs font-bold shrink-0">🗑️ 移除</button>
         </div>
@@ -2951,7 +2964,9 @@
         return showToast("⚠️ 請先選擇目標隊伍！", true);
       }
 
-      showLoading(syncAllTeams ? "正在將課表同步發佈至所有隊伍..." : `正在儲存【${getTeamNameById(targetTeamId)}】課表...`);
+      // 課表編輯永遠針對「本週」，避免因切換查看歷史週次而誤改歷史課表
+      const scheduleWeekId = thisWeekId;
+      showLoading(syncAllTeams ? "正在將本週課表同步發佈至所有隊伍..." : `正在儲存本週【${getTeamNameById(targetTeamId)}】課表...`);
       try {
         await ensureAuthReady(true);
         currentSchedule = currentSchedule.map((ex, i) => {
@@ -2969,15 +2984,15 @@
         batch.set(doc(db, "settings", "exercise_catalog"), { catalog: exerciseCatalog });
 
         if (syncAllTeams) {
-          batch.set(doc(db, "schedules", selectedWeekId), { exercises: currentSchedule });
+          batch.set(doc(db, "schedules", scheduleWeekId), { exercises: currentSchedule });
           batch.set(doc(db, "schedules", "default"), { exercises: currentSchedule });
           teamsList.forEach(t => {
-            batch.set(doc(db, "schedules", `${selectedWeekId}_${t.id}`), { exercises: currentSchedule });
+            batch.set(doc(db, "schedules", `${scheduleWeekId}_${t.id}`), { exercises: currentSchedule });
             batch.set(doc(db, "schedules", `default_${t.id}`), { exercises: currentSchedule });
-            saveScheduleToLocalCache(`${selectedWeekId}_${t.id}`, currentSchedule);
+            saveScheduleToLocalCache(`${scheduleWeekId}_${t.id}`, currentSchedule);
           });
         } else {
-          batch.set(doc(db, "schedules", `${selectedWeekId}_${targetTeamId}`), { exercises: currentSchedule });
+          batch.set(doc(db, "schedules", `${scheduleWeekId}_${targetTeamId}`), { exercises: currentSchedule });
           batch.set(doc(db, "schedules", `default_${targetTeamId}`), { exercises: currentSchedule });
           saveScheduleToLocalCache(`${selectedWeekId}_${targetTeamId}`, currentSchedule);
         }
@@ -3014,7 +3029,7 @@
               </div>
             </div>
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full min-w-0">
-              <input type="text" id="editTeamName_${idx}" value="${t.name}" class="w-full min-w-0 flex-1 p-2.5 border-2 border-slate-300 focus:border-emerald-500 rounded-xl bg-white font-black text-slate-800 text-sm sm:text-base">
+              <input type="text" id="editTeamName_${idx}" value="${escapeHtml(t.name)}" class="w-full min-w-0 flex-1 p-2.5 border-2 border-slate-300 focus:border-emerald-500 rounded-xl bg-white font-black text-slate-800 text-sm sm:text-base">
               <div class="flex gap-2 shrink-0">
                 <button type="button" data-saveteam="${idx}" class="btn-save-team flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-sm">💾 儲存隊名</button>
                 <button type="button" data-delteam="${idx}" class="btn-del-team bg-rose-100 hover:bg-rose-200 text-rose-700 text-xs font-black px-3.5 py-2.5 rounded-xl">🗑️ 刪除</button>
@@ -3058,8 +3073,8 @@
       container.innerHTML = achievementsList.map((ach, idx) => `
         <div class="border-2 border-slate-200 rounded-2xl p-3.5 bg-slate-50 space-y-2">
           <div class="grid grid-cols-1 sm:grid-cols-5 gap-2">
-            <input type="text" id="editAchIcon_${idx}" value="${ach.icon}" class="p-2 border rounded-xl bg-white font-bold text-center">
-            <input type="text" id="editAchTitle_${idx}" value="${ach.title}" class="p-2 border rounded-xl bg-white font-bold sm:col-span-2">
+            <input type="text" id="editAchIcon_${idx}" value="${escapeHtml(ach.icon)}" class="p-2 border rounded-xl bg-white font-bold text-center">
+            <input type="text" id="editAchTitle_${idx}" value="${escapeHtml(ach.title)}" class="p-2 border rounded-xl bg-white font-bold sm:col-span-2">
             <select id="editAchType_${idx}" class="p-2 border rounded-xl bg-white font-bold text-xs">
               <option value="weekly_stars" ${ach.type === 'weekly_stars' ? 'selected' : ''}>🔄 每週成就 (每週刷新)</option>
               <option value="total_stars" ${ach.type === 'total_stars' ? 'selected' : ''}>♾️ 歷史成就 (永久累積)</option>
@@ -3067,7 +3082,7 @@
             <input type="number" id="editAchTarget_${idx}" value="${ach.target}" class="p-2 border rounded-xl bg-white font-bold text-center" title="目標星數">
           </div>
           <div class="flex flex-col sm:flex-row gap-2">
-            <input type="text" id="editAchDesc_${idx}" value="${ach.desc}" class="flex-1 p-2 border rounded-xl bg-white text-sm font-medium">
+            <input type="text" id="editAchDesc_${idx}" value="${escapeHtml(ach.desc)}" class="flex-1 p-2 border rounded-xl bg-white text-sm font-medium">
             <div class="flex gap-2 shrink-0">
               <button type="button" data-saveach="${idx}" class="btn-save-ach flex-1 sm:flex-initial bg-emerald-600 text-white text-xs font-bold px-3 py-2 rounded-xl">💾 儲存修改</button>
               <button type="button" data-delach="${idx}" class="btn-del-ach bg-rose-500 text-white text-xs font-bold px-3 py-2 rounded-xl">🗑️ 刪除</button>
@@ -3134,7 +3149,7 @@
           <div class="border-2 rounded-2xl p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
             <div class="min-w-0 space-y-1.5 w-full lg:w-auto">
               <div class="flex items-center flex-wrap gap-2">
-                <span class="text-base sm:text-lg font-black text-slate-900">${u.chineseName}</span>
+                <span class="text-base sm:text-lg font-black text-slate-900">${escapeHtml(u.chineseName)}</span>
                 <span class="text-xs px-2.5 py-0.5 rounded-full font-black ${roleBadgeClass}">
                   ${getRoleLabel(u.role)}
                 </span>
@@ -3144,8 +3159,8 @@
               </div>
               <div class="flex flex-wrap gap-1">${teamsPillsHtml}</div>
               <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span>帳號：<strong>${u.username}</strong></span>
-                <span>電話：<strong>${u.phone}</strong></span>
+                <span>帳號：<strong>${escapeHtml(u.username)}</strong></span>
+                <span>電話：<strong>${escapeHtml(u.phone)}</strong></span>
                 <span class="inline-flex items-center gap-1">密碼狀態：${pwdDisplayHtml}</span>
               </div>
             </div>
@@ -3483,9 +3498,9 @@
 
     document.getElementById("scheduleTargetTeamSelect").addEventListener("change", async (e) => {
       scheduleEditTeamId = e.target.value;
-      showLoading(`正在載入【${getTeamNameById(scheduleEditTeamId)}】的課表...`);
+      showLoading(`正在載入【${getTeamNameById(scheduleEditTeamId)}】本週課表...`);
       try {
-        await loadScheduleForWeek(selectedWeekId, scheduleEditTeamId);
+        await loadScheduleForWeek(thisWeekId, scheduleEditTeamId);
         renderScheduleEditor();
       } catch (err) {
         showToast(diagnoseFirebaseError(err), true);
