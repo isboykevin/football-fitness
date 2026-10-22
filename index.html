@@ -811,9 +811,8 @@
 
       const uKey = normalizeLookupKey("u", trimmed);
       const pKey = normalizeLookupKey("p", trimmed);
-      const nKey = normalizeLookupKey("n", trimmed);
 
-      const keysToTry = Array.from(new Set([uKey, pKey, nKey].filter(Boolean)));
+      const keysToTry = Array.from(new Set([uKey, pKey].filter(Boolean)));
       const lookupSnaps = await withRetry(() => Promise.all(
         keysToTry.map(k => getDoc(doc(db, "user_lookup", k)).catch(() => null))
       ));
@@ -938,7 +937,7 @@
           checkboxesWrap.innerHTML = checkboxOptions.map(opt => `
             <label class="flex items-center gap-3 p-2.5 bg-white rounded-xl border-2 border-slate-200 hover:border-emerald-400 cursor-pointer select-none">
               <input type="checkbox" value="${opt.id}" ${opt.checked ? 'checked' : ''} class="modal-chk-item w-5 h-5 accent-emerald-600 rounded">
-              <span class="font-black text-slate-800 text-sm">${opt.label}</span>
+              <span class="font-black text-slate-800 text-sm">${escapeHtml(opt.label)}</span>
             </label>
           `).join("");
         } else {
@@ -2379,7 +2378,7 @@
         const progressPct = Math.min(100, Math.round((targetWeekStars / ach.target) * 100));
         return `
           <div class="rounded-2xl p-3.5 sm:p-4 border-2 transition flex items-start gap-3 ${unlocked ? 'bg-gradient-to-br from-amber-50 to-yellow-100 border-amber-400 shadow-md' : 'bg-slate-50 border-slate-200 opacity-80'}">
-            <div class="text-3xl sm:text-4xl p-2 rounded-2xl shrink-0 ${unlocked ? 'bg-amber-200/80' : 'bg-slate-200 grayscale'}">${ach.icon}</div>
+            <div class="text-3xl sm:text-4xl p-2 rounded-2xl shrink-0 ${unlocked ? 'bg-amber-200/80' : 'bg-slate-200 grayscale'}">${escapeHtml(ach.icon)}</div>
             <div class="flex-1 min-w-0">
               <div class="flex justify-between items-start gap-1">
                 <h4 class="font-black text-sm sm:text-base ${unlocked ? 'text-amber-950' : 'text-slate-600'}">${escapeHtml(ach.title)}</h4>
@@ -2795,7 +2794,6 @@
             <div class="flex items-center gap-1.5 shrink-0">
               <input type="number" id="coach_ex_input_${ex.id}" value="${val}" min="0" class="w-20 sm:w-24 p-2 text-center font-black border-2 border-amber-400 rounded-xl">
               <span class="text-xs sm:text-sm font-bold text-slate-600">${escapeHtml(ex.unit)}</span>
-            </div>
             </div>
           </div>
         `;
