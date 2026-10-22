@@ -1777,7 +1777,7 @@
       const inputKey = await openCustomModal({
         icon: "😢",
         title: "忘記密碼？通知總教練幫手",
-        message: "請輸入你的「電話號碼」、「帳號名稱」或「中文姓名」，系統會亮起紅燈通知總教練幫你重設密碼：",
+        message: "請輸入你的「電話號碼」或「帳號名稱」，系統會亮起紅燈通知總教練幫你重設密碼：",
         showInput: true,
         inputValue: identifier,
         inputPlaceholder: "例如：91234567 或 ming01",
@@ -2570,16 +2570,16 @@
       requireStaff();
       await ensureAuthReady(false);
       selectedWeekId = wId;
-      const targetTeamForSchedule = (adminFilterTeamId !== "ALL" && adminFilterTeamId !== "NONE")
-        ? adminFilterTeamId
-        : (getAuthorizedTeamsForCurrentStaff()[0]?.id || null);
+      // 課表編輯器永遠只顯示【本週】＋目標隊伍的課表，避免切換查看歷史週次時污染
+      const editTargetTeam = scheduleEditTeamId || (getAuthorizedTeamsForCurrentStaff()[0]?.id || null);
 
       const [, snap] = await withRetry(() => Promise.all([
-        loadScheduleForWeek(wId, targetTeamForSchedule, forceRefresh),
+        loadScheduleForWeek(thisWeekId, editTargetTeam, forceRefresh),
         getDocs(query(collection(db, "logs"), where("weekId", "==", wId)))
       ]));
 
       populateExerciseSelectors();
+      renderScheduleEditor();   // ← 新增：載入後立即重繪課表編輯器
 
       adminWeekLogsMap = {};
       snap.forEach(d => {
@@ -3165,7 +3165,7 @@
                   🚩 分配隊伍
                 </button>
               ` : ''}
-              <button type="button" data-resetuid="${u.id}" data-resetname="${u.chineseName}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
+              <button type="button" data-resetuid="${u.id}" data-resetname="${escapeHtml(u.chineseName)}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
                 🔑 改密碼
               </button>
               <select data-changeroleuid="${u.id}" class="sel-admin-changerole bg-purple-50 border-2 border-purple-300 text-purple-950 text-xs font-black px-2.5 py-2 rounded-xl">
@@ -3173,7 +3173,7 @@
                 <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>設為：🛡️ 管理員(助教)</option>
                 <option value="coach" ${u.role === 'coach' ? 'selected' : ''}>設為：👑 總教練</option>
               </select>
-              <button type="button" data-deleteuid="${u.id}" data-deletename="${u.chineseName}" class="btn-admin-deleteuser bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 text-xs font-black px-3 py-2 rounded-xl transition shrink-0" title="永久刪除此帳號及所有紀錄">
+              <button type="button" data-deleteuid="${u.id}" data-deletename="${escapeHtml(u.chineseName)}" class="btn-admin-deleteuser bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 text-xs font-black px-3 py-2 rounded-xl transition shrink-0" title="永久刪除此帳號及所有紀錄">
                 🗑️ 刪除帳號
               </button>
             </div>
@@ -3440,6 +3440,18 @@
             ? "adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-2 rounded-xl text-xs sm:text-sm shadow"
             : "adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm";
         });
+        // 切換到「編輯隊伍課表」時強制重載本週課表
+        if (tab === "schedule") {
+          showLoading("正在載入本週課表...");
+          try {
+            await loadScheduleForWeek(thisWeekId, scheduleEditTeamId);
+            renderScheduleEditor();
+          } catch (err) {
+            showToast(diagnoseFirebaseError(err), true);
+          } finally {
+            hideLoading();
+          }
+        }
       });
     });
 
