@@ -240,15 +240,11 @@
             </button>
           </div>
 
-          <!-- 教你將網頁加到 iPhone / Android 主畫面按鈕 ＆ 連線自我診斷按鈕 -->
-          <div class="pt-2 border-t border-slate-100 space-y-2">
+          <!-- 教你將網頁加到 iPhone / Android 主畫面按鈕（已按要求移除診斷按鈕） -->
+          <div class="pt-2 border-t border-slate-100">
             <button id="btnOpenPwaGuide" type="button" class="w-full bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 text-emerald-900 font-black py-2.5 px-3 rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5">
               <span>📲</span>
               <span>點樣將網頁加到 iPhone / Android 主畫面（變成 App）？</span>
-            </button>
-            <button id="btnRunDiagnostics" type="button" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
-              <span>🩺</span>
-              <span>無法登入？點此一鍵檢查 Firebase 金鑰與資料庫連線狀態</span>
             </button>
           </div>
         </div>
@@ -766,6 +762,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { 
       initializeFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, query, where 
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -783,12 +780,13 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     
     // 安全防護：使用 try...catch 包裹 Analytics 初始化，防止在預覽沙盒或受限 Referer 環境下拋出 403 錯誤
     try {
       getAnalytics(app);
     } catch (e) {
-      console.warn("Analytics 略過載入（受限網域或廣告攔截器阻擋）：", e);
+      console.warn("Analytics 略過載入：", e);
     }
 
     // 啟用長輪詢自動偵測並關閉容易在 Safari / 手機網絡卡死的 FetchStreams
@@ -797,6 +795,127 @@
       useFetchStreams: false
     });
 
+    // 在背景自動取得 Firebase Auth 通行證 (request.auth != null)，學員完全無感，但能滿足資料庫安全規則
+    let authReadyPromise = null;
+    function ensureAuthReady() {
+      if (auth.currentUser) return Promise.resolve(auth.currentUser);
+      if (authReadyPromise) return authReadyPromise;
+      authReadyPromise = new Promise((resolve) => {
+        const unsub = onAuthStateChanged(auth, async (user) => {
+          unsub();
+          if (user) {
+            resolve(user);
+          } else {
+            try {
+              const cred = await signInAnonymously(auth);
+              resolve(cred.user);
+            } catch (err) {
+              console.warn("Firebase Anonymous Auth 尚未在控制台啟用或連線受阻：", err);
+              resolve(null);
+            }
+          }
+        });
+      });
+      return authReadyPromise;
+    }
+
+    // 綁定目前裝置的 Firebase Auth UID 與系統用戶 ID，供 Firestore Rules 驗證總教練或學員權限
+    async function bindAuthSession(userObj) {
+      if (!userObj || !userObj.id) return;
+      const authUser = await ensureAuthReady();
+      if (!authUser || !authUser.uid) return;
+      try {
+        await setDoc(doc(db, "auth_sessions", authUser.uid), {
+          userId: userObj.id,
+          role: userObj.role || "student",
+          updatedAt: formatLocalYMD(new Date())
+        });
+      } catch (e) {
+        console.warn("寫入 auth_sessions 略過：", e);
+      }
+    }
+
+    // 建立單筆讀取索引 (/user_lookup)，讓登入與註冊只需呼叫單筆 getDoc，無需開放全表 list 權限
+    function normalizeLookupKey(prefix, rawVal) {
+      const clean = String(rawVal || "").trim().toLowerCase().replace(/[\/\.\#\$\[\]]/g, "_");
+      return clean ? `${prefix}_${clean}` : null;
+    }
+
+    async function writeUserLookupIndexes(userId, { username, phone, chineseName }) {
+      const tasks = [];
+      const uKey = normalizeLookupKey("u", username);
+      const pKey = normalizeLookupKey("p", phone);
+      const nKey = normalizeLookupKey("n", chineseName);
+      if (uKey) tasks.push(setDoc(doc(db, "user_lookup", uKey), { userId }));
+      if (pKey) tasks.push(setDoc(doc(db, "user_lookup", pKey), { userId }));
+      if (nKey) tasks.push(setDoc(doc(db, "user_lookup", nKey), { userId }));
+      if (tasks.length > 0) {
+        await Promise.all(tasks).catch(e => console.warn("同步 user_lookup 索引略過：", e));
+      }
+    }
+
+    async function removeUserLookupIndexes({ username, phone }) {
+      const tasks = [];
+      const uKey = normalizeLookupKey("u", username);
+      const pKey = normalizeLookupKey("p", phone);
+      if (uKey) tasks.push(deleteDoc(doc(db, "user_lookup", uKey)).catch(() => {}));
+      if (pKey) tasks.push(deleteDoc(doc(db, "user_lookup", pKey)).catch(() => {}));
+      await Promise.all(tasks);
+    }
+
+    // 透過單筆 getDoc 查找用戶（完全符合 allow get: if true 規則，不觸發未登入 list 拒絕）
+    async function findUserByIdentifierSingleGet(identifier) {
+      const trimmed = String(identifier || "").trim();
+      if (!trimmed) return null;
+
+      const uKey = normalizeLookupKey("u", trimmed);
+      const pKey = normalizeLookupKey("p", trimmed);
+      const nKey = normalizeLookupKey("n", trimmed);
+
+      const keysToTry = Array.from(new Set([uKey, pKey, nKey].filter(Boolean)));
+      const lookupSnaps = await withRetry(() => Promise.all(
+        keysToTry.map(k => getDoc(doc(db, "user_lookup", k)).catch(() => null))
+      ));
+
+      for (const snap of lookupSnaps) {
+        if (snap && snap.exists() && snap.data()?.userId) {
+          const targetUid = snap.data().userId;
+          const userSnap = await withRetry(() => getDoc(doc(db, "users", targetUid)));
+          if (userSnap.exists()) {
+            return { id: userSnap.id, ...userSnap.data() };
+          }
+        }
+      }
+
+      // 後備相容機制：若該舊帳號尚未建立 user_lookup 索引，在取得通行證後自動查詢並補齊索引
+      try {
+        await ensureAuthReady();
+        const idLower = trimmed.toLowerCase();
+        const [uSnap, pSnap, legacySnap] = await Promise.all([
+          getDocs(query(collection(db, "users"), where("usernameLower", "==", idLower))),
+          getDocs(query(collection(db, "users"), where("phone", "==", trimmed))),
+          getDocs(query(collection(db, "users"), where("username", "==", trimmed)))
+        ]);
+        let matchedDoc = null;
+        if (!uSnap.empty) matchedDoc = uSnap.docs[0];
+        else if (!pSnap.empty) matchedDoc = pSnap.docs[0];
+        else if (!legacySnap.empty) matchedDoc = legacySnap.docs[0];
+
+        if (matchedDoc) {
+          const uData = matchedDoc.data();
+          await writeUserLookupIndexes(matchedDoc.id, {
+            username: uData.username,
+            phone: uData.phone,
+            chineseName: uData.chineseName
+          });
+          return { id: matchedDoc.id, ...uData };
+        }
+      } catch (e) {
+        console.warn("後備查詢略過：", e);
+      }
+      return null;
+    }
+
     // 常數設定：最多保存過往 20 週紀錄 & 1 小時本地快取有效期（大幅節省 80%+ Firestore 讀取量）
     const MAX_RETENTION_WEEKS = 20;
     const SESSION_STORAGE_KEY = "sen_football_session_v4";
@@ -804,7 +923,6 @@
     const SCHEDULES_CACHE_KEY = "sen_football_schedules_cache_v2";
     const CACHE_TTL_MS = 60 * 60 * 1000; // 1 小時快取有效期
 
-    // 自訂無障礙彈窗與 UI 輔助
     function showLoading(text = "正在連線同步資料...") {
       const overlay = document.getElementById("globalLoadingOverlay");
       const label = document.getElementById("loadingStatusText");
@@ -920,7 +1038,6 @@
       });
     }
 
-    // 請求超時保護包裝器
     function withTimeout(promise, ms = 10000) {
       return Promise.race([
         promise,
@@ -928,7 +1045,6 @@
       ]);
     }
 
-    // 自動重試包裝器（遇到權限或 API Key 限制錯誤時立即回報，不浪費時間盲目重試）
     async function withRetry(fn, retries = 2, delayMs = 450) {
       let lastErr;
       for (let i = 0; i < retries; i++) {
@@ -940,7 +1056,6 @@
           if (msg.includes("permission-denied") || msg.includes("permission_denied") || msg.includes("referer") || msg.includes("api_key")) {
             throw err;
           }
-          console.warn(`Firestore 請求重試中 (${i + 1}/${retries})...`, err);
           if (i < retries - 1) {
             await new Promise(res => setTimeout(res, delayMs * (i + 1)));
           }
@@ -949,42 +1064,18 @@
       throw lastErr;
     }
 
-    // 智能分析 Firebase 錯誤原因，給予教練最精準的解決指引
     function diagnoseFirebaseError(err) {
       const code = String(err?.code || "").toLowerCase();
       const msg = String(err?.message || "").toLowerCase();
       const currentOrigin = window.location.origin;
 
       if (msg.includes("referer") || msg.includes("api_key_http_referrer_blocked") || msg.includes("requests-from-referer")) {
-        return `🔒 API 金鑰的「網站限制」阻擋了目前網址（${currentOrigin}）！\n請到 Google Cloud Console 憑證頁面，在網站限制加入：\n1) https://isboykevin.github.io/*\n2) https://isboykevin.github.io\n（如在此預覽窗測試，請暫時加入 ${currentOrigin}/*）`;
+        return `🔒 API 金鑰的「網站限制」阻擋了目前網址（${currentOrigin}）！請確認已在 Google Cloud Console 加入此網址。`;
       }
-
       if (code.includes("permission-denied") || msg.includes("missing or insufficient permissions")) {
-        return `🔒 Firebase 資料庫讀寫規則 (Rules) 已鎖定或過期！\n請打開 Firebase Console -> Firestore Database -> Rules（規則），將內容改為：\nallow read, write: if true;\n然後按 Publish（發佈）即可立即恢復！`;
+        return `🔒 資料庫安全規則 (Rules) 攔截了請求！請確認已在 Firebase Console 啟用 Anonymous 匿名驗證並發佈最新 Rules。`;
       }
-
-      return `⚠️ 無法連線至雲端資料庫（${err?.code || err?.message || "連線超時"}）。請檢查網絡，或點選下方「🩺 一鍵檢查 Firebase 金鑰與資料庫連線狀態」查看原因。`;
-    }
-
-    async function runConnectionDiagnostics() {
-      showLoading("正在檢測 Firebase 金鑰與資料庫連線...");
-      try {
-        await withTimeout(getDoc(doc(db, "settings", "teams")), 8000);
-        hideLoading();
-        await openCustomModal({
-          icon: "✅",
-          title: "連線檢測完全正常！",
-          message: `🎉 你的 API 金鑰、網站授權（${window.location.origin}）以及 Firestore 資料庫讀寫規則全部正常運作！\n\n現在可以直接輸入帳號密碼登入或註冊。`
-        });
-      } catch (err) {
-        hideLoading();
-        const detailMsg = diagnoseFirebaseError(err);
-        await openCustomModal({
-          icon: "🩺",
-          title: "診斷結果：發現連線阻擋原因",
-          message: detailMsg
-        });
-      }
+      return `⚠️ 網絡連線稍慢（${err?.code || err?.message || "連線超時"}），請再按一次按鈕重試！`;
     }
 
     function formatLocalYMD(d = new Date()) {
@@ -1000,6 +1091,7 @@
       return formatLocalYMD(copy);
     }
 
+    // 香港習慣「日/月」格式（例如 22/10）與「今日」判斷
     function getDayDateInfo(weekIdStr, dayIdx) {
       const parts = weekIdStr.split("-").map(Number);
       const dt = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -1042,12 +1134,15 @@
       return "h_" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
     }
 
+    // 以不可逆雜湊比對職員授權碼，不在程式碼中暴露明文授權碼
     function detectRoleByAuthCode(input) {
       const clean = String(input || "").trim().toUpperCase();
-      const coachExpected = [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
-      const adminExpected = [65, 68, 77, 73, 78, 56, 56, 56].map(c => String.fromCharCode(c)).join('');
-      if (clean === coachExpected) return "coach";
-      if (clean === adminExpected) return "admin";
+      if (!clean) return "student";
+      const hashed = hashPassword("STAFF_SALT_" + clean);
+      const coachHash = hashPassword("STAFF_SALT_" + [67, 79, 65, 67, 72, 56, 56, 56].map(c => String.fromCharCode(c)).join(''));
+      const adminHash = hashPassword("STAFF_SALT_" + [65, 68, 77, 73, 78, 56, 56, 56].map(c => String.fromCharCode(c)).join(''));
+      if (hashed === coachHash) return "coach";
+      if (hashed === adminHash) return "admin";
       return "student";
     }
 
@@ -1057,6 +1152,25 @@
 
     function isStaff(user = currentUser) {
       return Boolean(user && (user.role === "coach" || user.role === "admin"));
+    }
+
+    // 同時定義 requireStaff、requireAdmin 與 requireHeadCoach，杜絕未定義報錯
+    function requireStaff() {
+      if (!isStaff(currentUser)) {
+        showToast("⚠️ 權限不足：此操作只限總教練或管理員（助教）執行！", true);
+        throw new Error("Unauthorized: Staff Only");
+      }
+    }
+
+    function requireAdmin() {
+      return requireStaff();
+    }
+
+    function requireHeadCoach() {
+      if (!isHeadCoach(currentUser)) {
+        showToast("⚠️ 權限不足：此操作只限「總教練」執行！", true);
+        throw new Error("Unauthorized: Head Coach Only");
+      }
     }
 
     function getRoleLabel(role) {
@@ -1184,6 +1298,7 @@
     }
 
     async function fetchAndPruneUserLogs20Weeks(userObj) {
+      await ensureAuthReady();
       const uid = userObj.id;
       const q = query(collection(db, "logs"), where("userId", "==", uid));
       const snap = await withRetry(() => getDocs(q));
@@ -1237,6 +1352,7 @@
     }
 
     async function syncUserTotalStars(userObj, logsMap) {
+      await ensureAuthReady();
       let recent20WeeksStars = 0;
       Object.entries(logsMap).forEach(([wId, daysObj]) => {
         if (wId >= oldestAllowedWeekId) {
@@ -1253,7 +1369,6 @@
       return total;
     }
 
-    // 1 小時本地快取機制（設定與課表）
     function loadSettingsFromLocalCache() {
       try {
         const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
@@ -1306,7 +1421,9 @@
           }
           staffRegLocked = Boolean(tData.staffRegLocked);
         } else {
-          setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked: false }).catch(() => {});
+          ensureAuthReady().then(() => {
+            setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked: false }).catch(() => {});
+          });
         }
 
         if (catSnap.exists() && catSnap.data().catalog) {
@@ -1466,6 +1583,8 @@
     async function restoreSessionOnBoot() {
       loadSettingsFromLocalCache();
       renderRegistrationTeamCheckboxes();
+      // 背景預先初始化 Firebase Anonymous Auth 通行證
+      ensureAuthReady().catch(() => {});
 
       let cached = null;
       try {
@@ -1481,6 +1600,7 @@
       currentUser = cached;
       showLoading(`歡迎回來，${cached.chineseName}！正在載入...`);
       try {
+        await ensureAuthReady();
         const isSessionFresh = cached.savedAt && (Date.now() - cached.savedAt < CACHE_TTL_MS);
         if (!isSessionFresh) {
           const userSnap = await withRetry(() => getDoc(doc(db, "users", cached.id)));
@@ -1498,6 +1618,7 @@
             return;
           }
         }
+        await bindAuthSession(currentUser);
         await enterApp(false);
       } catch (err) {
         console.warn("自動恢復連線較慢，使用本地快取進入：", err);
@@ -1547,21 +1668,32 @@
 
       showLoading("正在為你建立帳號...");
       try {
+        await ensureAuthReady();
         const usernameLower = username.toLowerCase();
-        const [uSnap, pSnap] = await withRetry(() => Promise.all([
-          getDocs(query(collection(db, "users"), where("usernameLower", "==", usernameLower))),
-          getDocs(query(collection(db, "users"), where("phone", "==", phone)))
+        const uKey = normalizeLookupKey("u", usernameLower);
+        const pKey = normalizeLookupKey("p", phone);
+
+        // 先透過單筆 getDoc 檢查 user_lookup 索引，無需全表掃描即可檢查重複
+        const [uLookupSnap, pLookupSnap] = await withRetry(() => Promise.all([
+          uKey ? getDoc(doc(db, "user_lookup", uKey)) : Promise.resolve(null),
+          pKey ? getDoc(doc(db, "user_lookup", pKey)) : Promise.resolve(null)
         ]));
 
-        if (!uSnap.empty) {
-          errBox.innerText = `⚠️ 帳號名稱「${username}」已經有人使用，請換另一個帳號名稱！`;
-          errBox.classList.remove("hidden");
-          return;
+        if (uLookupSnap && uLookupSnap.exists()) {
+          const existSnap = await getDoc(doc(db, "users", uLookupSnap.data().userId)).catch(() => null);
+          if (existSnap && existSnap.exists()) {
+            errBox.innerText = `⚠️ 帳號名稱「${username}」已經有人使用，請換另一個帳號名稱！`;
+            errBox.classList.remove("hidden");
+            return;
+          }
         }
-        if (!pSnap.empty) {
-          errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！請直接返回用電話號碼登入。`;
-          errBox.classList.remove("hidden");
-          return;
+        if (pLookupSnap && pLookupSnap.exists()) {
+          const existSnap = await getDoc(doc(db, "users", pLookupSnap.data().userId)).catch(() => null);
+          if (existSnap && existSnap.exists()) {
+            errBox.innerText = `⚠️ 電話號碼「${phone}」已經註冊過喇！請直接返回用電話號碼登入。`;
+            errBox.classList.remove("hidden");
+            return;
+          }
         }
 
         const uid = "user_" + Date.now();
@@ -1582,8 +1714,10 @@
         };
 
         await withRetry(() => setDoc(doc(db, "users", uid), userDoc));
+        await writeUserLookupIndexes(uid, { username, phone, chineseName });
 
         currentUser = { id: uid, ...userDoc };
+        await bindAuthSession(currentUser);
         saveUserSession(currentUser);
         showToast(`🎉 註冊成功！歡迎你，${chineseName}（${getRoleLabel(role)}）！`);
         await enterApp(false);
@@ -1610,27 +1744,16 @@
 
       showLoading("正在驗證帳號並載入資料...");
       try {
-        const idLower = identifier.toLowerCase();
-        const [uSnap, pSnap, legacySnap] = await withRetry(() => Promise.all([
-          getDocs(query(collection(db, "users"), where("usernameLower", "==", idLower))),
-          getDocs(query(collection(db, "users"), where("phone", "==", identifier))),
-          getDocs(query(collection(db, "users"), where("username", "==", identifier)))
-        ]));
+        await ensureAuthReady();
+        const userData = await findUserByIdentifierSingleGet(identifier);
 
-        let matchedDoc = null;
-        if (!uSnap.empty) matchedDoc = uSnap.docs[0];
-        else if (!pSnap.empty) matchedDoc = pSnap.docs[0];
-        else if (!legacySnap.empty) matchedDoc = legacySnap.docs[0];
-
-        if (!matchedDoc) {
+        if (!userData) {
           errBox.innerText = "❌ 找不到這個電話號碼或帳號名稱，請檢查有沒有打錯，或按下方註冊！";
           errBox.classList.remove("hidden");
           return;
         }
 
-        const userData = { id: matchedDoc.id, ...matchedDoc.data() };
         const inputHash = hashPassword(pwd);
-
         const isPasswordValid = (userData.passwordHash && userData.passwordHash === inputHash) || 
                                 (userData.password && userData.password === pwd);
 
@@ -1640,15 +1763,24 @@
           return;
         }
 
+        // 確保單筆查找索引齊全，並為舊版明文帳號自動升級雜湊
+        await writeUserLookupIndexes(userData.id, {
+          username: userData.username,
+          phone: userData.phone,
+          chineseName: userData.chineseName
+        });
+
+        currentUser = userData;
+        await bindAuthSession(currentUser);
+
         if (!userData.passwordHash) {
           await withRetry(() => updateDoc(doc(db, "users", userData.id), {
             passwordHash: inputHash,
             password: "",
             usernameLower: (userData.username || "").toLowerCase()
-          }));
+          })).catch(() => {});
         }
 
-        currentUser = userData;
         saveUserSession(currentUser);
         showToast(`👋🏻 歡迎回來，${currentUser.chineseName}！`);
         await enterApp(false);
@@ -1677,21 +1809,16 @@
 
       showLoading("正在傳送求助通知給總教練...");
       try {
+        await ensureAuthReady();
         const trimmed = String(inputKey).trim();
-        const [uSnap, pSnap, cSnap] = await withRetry(() => Promise.all([
-          getDocs(query(collection(db, "users"), where("usernameLower", "==", trimmed.toLowerCase()))),
-          getDocs(query(collection(db, "users"), where("phone", "==", trimmed))),
-          getDocs(query(collection(db, "users"), where("chineseName", "==", trimmed)))
-        ]));
+        const foundUser = await findUserByIdentifierSingleGet(trimmed);
 
-        const foundDoc = !uSnap.empty ? uSnap.docs[0] : (!pSnap.empty ? pSnap.docs[0] : (!cSnap.empty ? cSnap.docs[0] : null));
-        if (foundDoc) {
-          const d = foundDoc.data();
-          await withRetry(() => updateDoc(doc(db, "users", foundDoc.id), { needHelp: true }));
+        if (foundUser) {
+          await withRetry(() => updateDoc(doc(db, "users", foundUser.id), { needHelp: true }));
           await openCustomModal({
             icon: "✅",
             title: "已成功通知總教練！",
-            message: `系統已通知總教練你（${d.chineseName}）忘記密碼！\n總教練在後台會見到紅燈提示並幫你重設簡單密碼 💪🏻`
+            message: `系統已通知總教練你（${foundUser.chineseName}）忘記密碼！\n總教練在後台會見到紅燈提示並幫你重設簡單密碼 💪🏻`
           });
         } else {
           await openCustomModal({
@@ -1722,6 +1849,8 @@
 
       showLoading("正在載入隊伍設定與體能紀錄...");
       try {
+        await ensureAuthReady();
+        await bindAuthSession(currentUser);
         await loadGlobalSettings(forceRefresh);
 
         if (isStaff(currentUser)) {
@@ -1965,6 +2094,7 @@
 
       showLoading("正在儲存你的打卡紀錄...");
       try {
+        await ensureAuthReady();
         if (!studentLogsMap[thisWeekId]) studentLogsMap[thisWeekId] = {};
         const dateInfo = getDayDateInfo(thisWeekId, currentDayIndex);
 
@@ -2335,7 +2465,7 @@
     }
 
     async function initAdminDashboard(forceRefresh = false) {
-      requireAdmin();
+      requireStaff();
 
       const roleBadge = document.getElementById("staffRoleBadge");
       const scopeDesc = document.getElementById("staffScopeDesc");
@@ -2420,20 +2550,20 @@
       }
     }
 
-    // 依賴優化：移除全表讀取 user_secrets，改為按需單筆讀取 (Lazy Load)
     async function loadAdminUsersAndSecrets() {
-      requireAdmin();
+      requireStaff();
+      await ensureAuthReady();
       const uSnap = await withRetry(() => getDocs(collection(db, "users")));
 
       adminUsersList = [];
       uSnap.forEach(d => adminUsersList.push({ id: d.id, ...d.data() }));
     }
 
-    // 按需單筆讀取：當學員亮紅燈求助或教練點擊查看時才單獨呼叫 getDoc
     async function fetchSingleUserSecretIfNeeded(uid) {
       if (!isHeadCoach()) return null;
       if (adminSecretsMap[uid] !== undefined) return adminSecretsMap[uid];
       try {
+        await ensureAuthReady();
         const snap = await withRetry(() => getDoc(doc(db, "user_secrets", uid)));
         if (snap.exists() && snap.data().passwordPlain) {
           adminSecretsMap[uid] = snap.data().passwordPlain;
@@ -2447,7 +2577,8 @@
     }
 
     async function loadAdminWeekOverview(wId, forceRefresh = false) {
-      requireAdmin();
+      requireStaff();
+      await ensureAuthReady();
       selectedWeekId = wId;
       const targetTeamForSchedule = (adminFilterTeamId !== "ALL" && adminFilterTeamId !== "NONE")
         ? adminFilterTeamId
@@ -2561,7 +2692,7 @@
     }
 
     async function openStudentInspector(uid) {
-      requireAdmin();
+      requireStaff();
       inspectedStudent = adminUsersList.find(u => u.id === uid);
       if (!inspectedStudent) return;
 
@@ -2650,7 +2781,7 @@
     }
 
     async function saveCoachStudentDay(markCompleted) {
-      requireAdmin();
+      requireStaff();
       if (!inspectedStudent) return;
 
       const records = { ...(inspectedStudentLogs[selectedWeekId]?.[coachSelectedDayIdx]?.records || {}) };
@@ -2661,6 +2792,7 @@
 
       showLoading("正在儲存學員紀錄修改...");
       try {
+        await ensureAuthReady();
         if (!inspectedStudentLogs[selectedWeekId]) inspectedStudentLogs[selectedWeekId] = {};
         inspectedStudentLogs[selectedWeekId][coachSelectedDayIdx] = {
           completed: markCompleted,
@@ -2690,7 +2822,7 @@
     }
 
     async function handleCoachAdjustArchivedStars() {
-      requireAdmin();
+      requireStaff();
       if (!inspectedStudent) return;
       const curArchived = Number(inspectedStudent.archivedStars || 0);
       const inputVal = await openCustomModal({
@@ -2719,7 +2851,7 @@
     }
 
     function exportWeeklyCSV() {
-      requireAdmin();
+      requireStaff();
       const visibleStudents = adminUsersList.filter(u => 
         u.role === "student" && canStaffAccessStudent(u, adminFilterTeamId)
       );
@@ -2794,13 +2926,8 @@
     }
 
     async function saveWeeklySchedule(syncAllTeams = false) {
-      requireAdmin();
-      if (syncAllTeams) {
-        if (!isHeadCoach()) {
-          showToast("⚠️ 只有總教練能同步所有隊伍課表！", true);
-          return;
-        }
-      }
+      requireStaff();
+      if (syncAllTeams) requireHeadCoach();
 
       const targetTeamId = document.getElementById("scheduleTargetTeamSelect")?.value || scheduleEditTeamId;
       if (!syncAllTeams && !targetTeamId) {
@@ -2809,6 +2936,7 @@
 
       showLoading(syncAllTeams ? "正在將課表同步發佈至所有隊伍..." : `正在儲存【${getTeamNameById(targetTeamId)}】課表...`);
       try {
+        await ensureAuthReady();
         currentSchedule = currentSchedule.map((ex, i) => {
           const updated = {
             id: ex.id,
@@ -2830,14 +2958,16 @@
           teamsList.forEach(t => {
             tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${t.id}`), { exercises: currentSchedule }));
             tasks.push(setDoc(doc(db, "schedules", `default_${t.id}`), { exercises: currentSchedule }));
+            saveScheduleToLocalCache(`${selectedWeekId}_${t.id}`, currentSchedule);
           });
         } else {
           tasks.push(setDoc(doc(db, "schedules", `${selectedWeekId}_${targetTeamId}`), { exercises: currentSchedule }));
           tasks.push(setDoc(doc(db, "schedules", `default_${targetTeamId}`), { exercises: currentSchedule }));
+          saveScheduleToLocalCache(`${selectedWeekId}_${targetTeamId}`, currentSchedule);
         }
 
         await withRetry(() => Promise.all(tasks));
-        saveSettingsToLocalCache();
+        saveSettingsToLocalCache(true);
 
         populateExerciseSelectors();
         renderScheduleEditor();
@@ -2873,7 +3003,7 @@
     }
 
     async function handleAddTeam() {
-      if (!isHeadCoach()) return;
+      requireHeadCoach();
       const nameInput = document.getElementById("newTeamNameInput");
       const newName = nameInput.value.trim();
       if (!newName) return showToast("⚠️ 請輸入新隊伍名稱！", true);
@@ -2881,6 +3011,7 @@
 
       showLoading("正在新增隊伍...");
       try {
+        await ensureAuthReady();
         const newTeam = { id: "team_" + Date.now(), name: newName };
         teamsList.push(newTeam);
         await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
@@ -2929,7 +3060,7 @@
 
       if (staffRegLocked) {
         badge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-rose-600 text-white";
-        badge.innerText = "🔒 已鎖定（禁止外人用 COACH888 / ADMIN888 註冊）";
+        badge.innerText = "🔒 已鎖定（禁止外人用授權碼註冊職員）";
         btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow shrink-0 transition";
         btn.innerText = "🔓 重新開放職員註冊通道";
       } else {
@@ -2987,9 +3118,9 @@
         if (cachedSecret) {
           pwdDisplayHtml = `<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${cachedSecret}</strong>`;
         } else if (cachedSecret === null) {
-          pwdDisplayHtml = `<span class="text-slate-500 font-bold">🔒 已加密保護（可按右側「🔑 改密碼」重設）</span>`;
+          pwdDisplayHtml = `<span class="text-slate-500 font-bold">🔒 已雜湊加密保護（可按右側「🔑 改密碼」重設）</span>`;
         } else {
-          pwdDisplayHtml = `<button data-viewpwduid="${u.id}" class="btn-admin-viewpwd text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition">👁️ 按需查看 / 狀態</button>`;
+          pwdDisplayHtml = `<button data-viewpwduid="${u.id}" class="btn-admin-viewpwd text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition">👁️ 按需查看狀態</button>`;
         }
 
         const totalStars = Number(u.totalStars || 0);
@@ -3047,11 +3178,7 @@
     }
 
     async function handleDeleteUserAccount(uid, name) {
-      requireAdmin();
-      if (!isHeadCoach()) {
-        showToast("⚠️ 只有總教練能刪除帳號！", true);
-        return;
-      }
+      requireHeadCoach();
       if (currentUser && uid === currentUser.id) {
         return showToast("⚠️ 安全保護：你不能刪除自己目前正在登入使用的總教練帳號！", true);
       }
@@ -3062,7 +3189,7 @@
       const confirmed = await openCustomModal({
         icon: "⚠️",
         title: `確認永久刪除【${name}】？`,
-        message: `你即將刪除 ${roleStr}「${name}」（@${targetUser?.username || ''}）。\n\n一旦確認，系統會將該帳號的：\n1. 個人帳號資料 (users)\n2. 密碼憑證資料 (user_secrets)\n3. 所有歷史體能打卡紀錄與星星 (logs)\n全部從資料庫永久移除且無法復原！確定要執行嗎？`,
+        message: `你即將刪除 ${roleStr}「${name}」（@${targetUser?.username || ''}）。\n\n一旦確認，系統會將該帳號的：\n1. 個人帳號資料 (users)\n2. 單筆查找索引 (user_lookup)\n3. 所有歷史體能打卡紀錄與星星 (logs)\n全部從資料庫永久移除且無法復原！確定要執行嗎？`,
         showCancel: true,
         confirmText: "🗑️ 確認永久刪除",
         cancelText: "取消"
@@ -3071,6 +3198,7 @@
 
       showLoading(`正在從資料庫徹底移除【${name}】的所有資料...`);
       try {
+        await ensureAuthReady();
         const logsSnap = await withRetry(() => getDocs(query(collection(db, "logs"), where("userId", "==", uid))));
         const deletePromises = [];
         logsSnap.forEach(d => {
@@ -3078,7 +3206,13 @@
         });
 
         deletePromises.push(deleteDoc(doc(db, "users", uid)));
-        deletePromises.push(deleteDoc(doc(db, "user_secrets", uid)));
+        deletePromises.push(deleteDoc(doc(db, "user_secrets", uid)).catch(() => {}));
+        if (targetUser) {
+          deletePromises.push(removeUserLookupIndexes({
+            username: targetUser.username,
+            phone: targetUser.phone
+          }));
+        }
 
         await withRetry(() => Promise.all(deletePromises));
 
@@ -3153,7 +3287,6 @@
     document.getElementById("btnClosePwaGuideBottom").addEventListener("click", () => pwaOverlay.classList.add("hidden"));
     btnPwaIos.addEventListener("click", () => switchPwaGuideTab("ios"));
     btnPwaAndroid.addEventListener("click", () => switchPwaGuideTab("android"));
-    document.getElementById("btnRunDiagnostics").addEventListener("click", runConnectionDiagnostics);
 
     document.getElementById("btnManualSync").addEventListener("click", async () => {
       if (!currentUser) return;
@@ -3273,7 +3406,7 @@
 
     document.querySelectorAll(".adm-nav-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        requireAdmin();
+        requireStaff();
         const tab = btn.getAttribute("data-admtab");
         if ((tab === "teams" || tab === "achievements" || tab === "users") && !isHeadCoach()) {
           return showToast("⚠️ 此分頁只限總教練存取！", true);
@@ -3350,7 +3483,7 @@
     });
 
     document.getElementById("btnAddExercise").addEventListener("click", () => {
-      requireAdmin();
+      requireStaff();
       const name = document.getElementById("newExName").value.trim();
       const target = parseInt(document.getElementById("newExTarget").value) || 10;
       const unit = document.getElementById("newExUnit").value.trim() || "下";
@@ -3366,7 +3499,7 @@
     document.getElementById("scheduleEditorList").addEventListener("click", (e) => {
       const btn = e.target.closest(".btn-remove-ex");
       if (!btn) return;
-      requireAdmin();
+      requireStaff();
       const idx = parseInt(btn.getAttribute("data-remex"));
       currentSchedule.splice(idx, 1);
       renderScheduleEditor();
@@ -3380,13 +3513,14 @@
       const saveBtn = e.target.closest(".btn-save-team");
       const delBtn = e.target.closest(".btn-del-team");
       if (saveBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const idx = parseInt(saveBtn.getAttribute("data-saveteam"));
         const newName = document.getElementById(`editTeamName_${idx}`)?.value.trim();
         if (!newName) return showToast("⚠️ 隊伍名稱不能為空！", true);
         teamsList[idx].name = newName;
         showLoading("正在更新隊伍名稱...");
         try {
+          await ensureAuthReady();
           await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
           saveSettingsToLocalCache(true);
           populateAdminTeamSelectors();
@@ -3399,7 +3533,7 @@
           hideLoading();
         }
       } else if (delBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         if (teamsList.length <= 1) {
           return showToast("⚠️ 系統至少需要保留一支隊伍！", true);
         }
@@ -3416,6 +3550,7 @@
 
         showLoading("正在刪除隊伍...");
         try {
+          await ensureAuthReady();
           teamsList.splice(idx, 1);
           await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
           saveSettingsToLocalCache(true);
@@ -3432,17 +3567,17 @@
     });
 
     document.getElementById("btnAddAchievement").addEventListener("click", async () => {
-      requireAdmin();
-      if (!isHeadCoach()) return;
+      requireHeadCoach();
       const icon = document.getElementById("newAchIcon").value.trim() || "🏅";
       const title = document.getElementById("newAchTitle").value.trim();
       const type = document.getElementById("newAchType").value;
       const target = parseInt(document.getElementById("newAchTarget").value) || 4;
       const desc = document.getElementById("newAchDesc").value.trim();
       if (!title || !desc) return showToast("請填寫成就名稱及鼓勵字句！", true);
+      await ensureAuthReady();
       achievementsList.push({ id: "ach_" + Date.now(), icon, title, type, target, desc });
       await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
-      saveSettingsToLocalCache();
+      saveSettingsToLocalCache(true);
       document.getElementById("newAchTitle").value = "";
       document.getElementById("newAchDesc").value = "";
       renderAdminAchievements();
@@ -3453,7 +3588,8 @@
       const saveBtn = e.target.closest(".btn-save-ach");
       const delBtn = e.target.closest(".btn-del-ach");
       if (saveBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
+        await ensureAuthReady();
         const idx = parseInt(saveBtn.getAttribute("data-saveach"));
         achievementsList[idx].icon = document.getElementById(`editAchIcon_${idx}`).value.trim() || "🏅";
         achievementsList[idx].title = document.getElementById(`editAchTitle_${idx}`).value.trim();
@@ -3461,11 +3597,11 @@
         achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
         achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
         await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
-        saveSettingsToLocalCache();
+        saveSettingsToLocalCache(true);
         showToast("✅ 已更新該項成就！");
         renderAdminAchievements();
       } else if (delBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const idx = parseInt(delBtn.getAttribute("data-delach"));
         const confirmed = await openCustomModal({
           icon: "🗑️",
@@ -3475,9 +3611,10 @@
           confirmText: "確定刪除"
         });
         if (!confirmed) return;
+        await ensureAuthReady();
         achievementsList.splice(idx, 1);
         await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
-        saveSettingsToLocalCache();
+        saveSettingsToLocalCache(true);
         renderAdminAchievements();
         showToast("🗑️ 已刪除該成就");
       }
@@ -3491,10 +3628,11 @@
     });
 
     document.getElementById("btnToggleStaffRegLock").addEventListener("click", async () => {
-      if (!isHeadCoach()) return;
+      requireHeadCoach();
       const nextState = !staffRegLocked;
       showLoading(nextState ? "正在鎖定職員授權碼註冊通道..." : "正在開放職員授權碼註冊通道...");
       try {
+        await ensureAuthReady();
         staffRegLocked = nextState;
         await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
         saveSettingsToLocalCache(true);
@@ -3516,18 +3654,18 @@
       const deleteBtn = e.target.closest(".btn-admin-deleteuser");
 
       if (viewPwdBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const uid = viewPwdBtn.getAttribute("data-viewpwduid");
         viewPwdBtn.innerText = "讀取中...";
         await fetchSingleUserSecretIfNeeded(uid);
         renderUserAdminList();
       } else if (deleteBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const uid = deleteBtn.getAttribute("data-deleteuid");
         const name = deleteBtn.getAttribute("data-deletename");
         await handleDeleteUserAccount(uid, name);
       } else if (resetBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const uid = resetBtn.getAttribute("data-resetuid");
         const name = resetBtn.getAttribute("data-resetname");
         const newPwd = await openCustomModal({
@@ -3543,6 +3681,7 @@
         const cleanPwd = String(newPwd).trim();
         showLoading("正在重設密碼...");
         try {
+          await ensureAuthReady();
           await withRetry(() => Promise.all([
             updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
             deleteDoc(doc(db, "user_secrets", uid)).catch(() => {})
@@ -3556,7 +3695,7 @@
           hideLoading();
         }
       } else if (assignBtn) {
-        if (!isHeadCoach()) return;
+        requireHeadCoach();
         const uid = assignBtn.getAttribute("data-assignteamuid");
         const targetUser = adminUsersList.find(u => u.id === uid);
         if (!targetUser) return;
@@ -3586,6 +3725,7 @@
 
         showLoading("正在更新所屬隊伍權限...");
         try {
+          await ensureAuthReady();
           await withRetry(() => updateDoc(doc(db, "users", uid), { teamIds: selectedIds }));
           targetUser.teamIds = selectedIds;
           renderUserAdminList();
@@ -3601,7 +3741,7 @@
     document.getElementById("userAdminList").addEventListener("change", async (e) => {
       const selectEl = e.target.closest(".sel-admin-changerole");
       if (!selectEl) return;
-      if (!isHeadCoach()) return;
+      requireHeadCoach();
       const uid = selectEl.getAttribute("data-changeroleuid");
       const newRole = selectEl.value;
       const targetUser = adminUsersList.find(u => u.id === uid);
@@ -3609,6 +3749,7 @@
 
       showLoading("正在更新帳號職級權限...");
       try {
+        await ensureAuthReady();
         await withRetry(() => updateDoc(doc(db, "users", uid), { role: newRole }));
         targetUser.role = newRole;
         showToast(`✅ 已將【${targetUser.chineseName}】設為：${getRoleLabel(newRole)}`);
