@@ -841,26 +841,24 @@
           updatedAt: formatLocalYMD(new Date())
         });
       } catch (e) {
-        console.warn("寫入 auth_sessions 略過：", e);
-      }
-    }
-
-    // 單筆查找索引 (/user_lookup)：為唯一識別鍵 (username, phone) 建立索引
+    // 單筆查找索引 (/user_lookup)：為唯一識別鍵 (username, phone) 及中文姓名 (chineseName) 建立索引
     function normalizeLookupKey(prefix, rawVal) {
       const clean = String(rawVal || "").trim().toLowerCase().replace(/[\/\.\#\$\[\]]/g, "_");
       return clean ? `${prefix}_${clean}` : null;
     }
 
-    function addLookupIndexesToBatch(batch, userId, { username, phone }) {
+    function addLookupIndexesToBatch(batch, userId, { username, phone, chineseName }) {
       const uKey = normalizeLookupKey("u", username);
       const pKey = normalizeLookupKey("p", phone);
+      const nKey = normalizeLookupKey("n", chineseName);
       if (uKey) batch.set(doc(db, "user_lookup", uKey), { userId });
       if (pKey) batch.set(doc(db, "user_lookup", pKey), { userId });
+      if (nKey) batch.set(doc(db, "user_lookup", nKey), { userId });
     }
 
-    async function writeUserLookupIndexes(userId, { username, phone }) {
+    async function writeUserLookupIndexes(userId, { username, phone, chineseName }) {
       const batch = writeBatch(db);
-      addLookupIndexesToBatch(batch, userId, { username, phone });
+      addLookupIndexesToBatch(batch, userId, { username, phone, chineseName });
       await batch.commit().catch(e => console.warn("同步 user_lookup 索引略過：", e));
     }
 
@@ -872,8 +870,9 @@
 
       const uKey = normalizeLookupKey("u", trimmed);
       const pKey = normalizeLookupKey("p", trimmed);
+      const nKey = normalizeLookupKey("n", trimmed);
 
-      const keysToTry = Array.from(new Set([uKey, pKey].filter(Boolean)));
+      const keysToTry = Array.from(new Set([uKey, pKey, nKey].filter(Boolean)));
       const lookupSnaps = await withRetry(() => Promise.all(
         keysToTry.map(k => getDoc(doc(db, "user_lookup", k)).catch(() => null))
       ));
@@ -888,7 +887,7 @@
         }
       }
 
-      // 後備查詢：若舊帳號尚未建立 user_lookup 索引，或輸入了中文姓名求助，在擁有匿名通行證時查詢並自動補齊索引
+      // 後備查詢：若舊帳號尚未建立 user_lookup 索引，在擁有匿名通行證時查詢並自動補齊索引
       const authUser = await ensureAuthReady(false);
       if (!authUser && lastAuthError) {
         throw lastAuthError;
@@ -913,7 +912,8 @@
             const uData = matchedDoc.data();
             await writeUserLookupIndexes(matchedDoc.id, {
               username: uData.username,
-              phone: uData.phone
+              phone: uData.phone,
+              chineseName: uData.chineseName
             });
             return { id: matchedDoc.id, ...uData };
           }
@@ -924,12 +924,12 @@
       return null;
     }
 
-    // 常數與具備 Schema Version 的快取設定
+    // 常數與具備 Schema Version 的快取設定（升級為 v4 自動清除舊有異常快取）
     const MAX_RETENTION_WEEKS = 20;
-    const CACHE_SCHEMA_VERSION = 3;
+    const CACHE_SCHEMA_VERSION = 4;
     const SESSION_STORAGE_KEY = "sen_football_session_v4";
-    const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v3";
-    const SCHEDULES_CACHE_KEY = "sen_football_schedules_cache_v3";
+    const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v4";
+    const SCHEDULES_CACHE_KEY = "sen_football_schedules_cache_v4";
     const CACHE_TTL_MS = 60 * 60 * 1000;
 
     function showLoading(text = "正在連線同步資料...") {
@@ -1048,10 +1048,13 @@
     }
 
     function withTimeout(promise, ms = 7500) {
-      return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("連線超時")), ms))
-      ]);
+      let timerId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timerId = setTimeout(() => reject(new Error("連線超時")), ms);
+      });
+      return Promise.race([promise, timeoutPromise]).finally(() => {
+        if (timerId) clearTimeout(timerId);
+      });
     }
 
     async function withRetry(fn, retries = 2, delayMs = 400) {
@@ -1416,7 +1419,8 @@
       return total;
     }
 
-    function loadSettingsFromLocalCache() {
+    // 純讀取快取物件（絕不覆蓋記憶體中的最新變數）
+    function readSettingsFromLocalCache() {
       try {
         const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
         if (!raw) return null;
@@ -1425,19 +1429,27 @@
           localStorage.removeItem(SETTINGS_CACHE_KEY);
           return null;
         }
-        if (Array.isArray(parsed.teamsList) && parsed.teamsList.length > 0) teamsList = parsed.teamsList;
-        if (parsed.exerciseCatalog) exerciseCatalog = { ...exerciseCatalog, ...parsed.exerciseCatalog };
-        if (Array.isArray(parsed.achievementsList) && parsed.achievementsList.length > 0) achievementsList = parsed.achievementsList;
-        if (typeof parsed.staffRegLocked === "boolean") staffRegLocked = parsed.staffRegLocked;
         return parsed;
       } catch (e) {
         return null;
       }
     }
 
+    // 將本地快取套用至記憶體變數（僅在系統啟動或讀取快取時呼叫）
+    function applySettingsFromLocalCache() {
+      const parsed = readSettingsFromLocalCache();
+      if (!parsed) return null;
+      if (Array.isArray(parsed.teamsList) && parsed.teamsList.length > 0) teamsList = parsed.teamsList;
+      if (parsed.exerciseCatalog) exerciseCatalog = { ...exerciseCatalog, ...parsed.exerciseCatalog };
+      if (Array.isArray(parsed.achievementsList) && parsed.achievementsList.length > 0) achievementsList = parsed.achievementsList;
+      if (typeof parsed.staffRegLocked === "boolean") staffRegLocked = parsed.staffRegLocked;
+      return parsed;
+    }
+
+    // 將記憶體中的最新設定寫入本地快取（不再呼叫 applySettingsFromLocalCache，徹底解決狀態被舊快取覆蓋的 Bug）
     function saveSettingsToLocalCache(markFreshFromServer = false) {
       try {
-        const existing = loadSettingsFromLocalCache();
+        const existing = readSettingsFromLocalCache();
         const lastFetchedAt = markFreshFromServer ? Date.now() : (existing?.lastFetchedAt || Date.now());
         localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({
           schemaVersion: CACHE_SCHEMA_VERSION,
@@ -1451,7 +1463,7 @@
     }
 
     async function loadGlobalSettings(forceRefresh = false) {
-      const cached = loadSettingsFromLocalCache();
+      const cached = applySettingsFromLocalCache();
       renderRegistrationTeamCheckboxes();
       if (isHeadCoach(currentUser)) renderStaffRegLockBanner();
 
@@ -1649,7 +1661,7 @@
 
     async function restoreSessionOnBoot() {
       refreshDateConstants();
-      loadSettingsFromLocalCache();
+      applySettingsFromLocalCache();
       renderRegistrationTeamCheckboxes();
       ensureAuthReady(false).catch(() => {});
 
@@ -1795,7 +1807,7 @@
 
         const batch = writeBatch(db);
         batch.set(doc(db, "users", uid), userDoc);
-        addLookupIndexesToBatch(batch, uid, { username, phone });
+        addLookupIndexesToBatch(batch, uid, { username, phone, chineseName });
         if (auth.currentUser?.uid) {
           batch.set(doc(db, "auth_sessions", auth.currentUser.uid), {
             userId: uid,
@@ -1859,7 +1871,8 @@
 
         await writeUserLookupIndexes(userData.id, {
           username: userData.username,
-          phone: userData.phone
+          phone: userData.phone,
+          chineseName: userData.chineseName
         });
 
         currentUser = userData;
@@ -2621,7 +2634,7 @@
       }
 
       try {
-        await loadAdminUsersAndSecrets();
+        await loadAdminUsers();
         await loadAdminWeekOverview(thisWeekId, forceRefresh);
 
         if (isHeadCoach()) {
@@ -2669,7 +2682,7 @@
       }
     }
 
-    async function loadAdminUsersAndSecrets() {
+    async function loadAdminUsers() {
       requireStaff();
       await ensureAuthReady(false);
       const uSnap = await withRetry(() => getDocs(collection(db, "users")));
@@ -2747,7 +2760,9 @@
       const enriched = filteredStudents.map(u => {
         const daysObj = adminWeekLogsMap[u.id] || {};
         const weeklyStars = Object.values(daysObj).filter(d => d && d.completed).length;
-        const totalStars = Math.max(weeklyStars, Number(u.totalStars || 0));
+        const storedTotal = Number(u.totalStars || 0);
+        const archived = Number(u.archivedStars || 0);
+        const totalStars = storedTotal >= weeklyStars ? storedTotal : (archived + weeklyStars);
         return { user: u, daysObj, weeklyStars, totalStars };
       });
 
@@ -3295,8 +3310,8 @@
       container.innerHTML = filteredUsers.map(u => {
         const tempResetPwd = sessionResetPasswordsMap[u.id];
         const pwdDisplayHtml = tempResetPwd
-          ? `<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">本次重設新密碼：${tempResetPwd}</strong>`
-          : `<span class="text-slate-500 font-bold">🔒 雜湊加密保護（可按右側「🔑 改密碼」重設）</span>`;
+          ? `<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">本次重設新密碼：${tempResetPwd}（請立即記下，重新整理後將隱藏）</strong>`
+          : `<span class="text-slate-500 font-bold">🔒 已雜湊保護（忘記密碼可按右側「🔑 改密碼」重設）</span>`;
 
         const totalStars = Number(u.totalStars || 0);
         const uTeams = getUserTeamIds(u);
