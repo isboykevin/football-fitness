@@ -3202,7 +3202,6 @@
         });
 
         batch.delete(doc(db, "users", uid));
-        batch.delete(doc(db, "user_secrets", uid));
 
         if (targetUser) {
           const uKey = normalizeLookupKey("u", targetUser.username);
@@ -3707,7 +3706,6 @@
             needHelp: false,
             password: ""
           });
-          batch.delete(doc(db, "user_secrets", uid));
           await withRetry(() => batch.commit());
 
           sessionResetPasswordsMap[uid] = cleanPwd;
