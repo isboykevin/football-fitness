@@ -2714,7 +2714,7 @@
         return showToast("⚠️ 權限不足：你只能檢視所屬隊伍的學員！", true);
       }
 
-      sshowLoading(`正在載入【${targetStu.chineseName}】近 20 週完整紀錄...`);
+      showLoading(`正在載入【${targetStu.chineseName}】近 20 週完整紀錄...`);
       try {
         inspectedStudent = targetStu;
         const stuTeamId = getUserTeamIds(targetStu)[0] || null;
@@ -2878,12 +2878,20 @@
       }
     }
 
-    function exportWeeklyCSV() {
+    async function exportWeeklyCSV() {
       requireStaff();
       const visibleStudents = adminUsersList.filter(u => 
         u.role === "student" && canStaffAccessStudent(u, adminFilterTeamId)
       );
       if (visibleStudents.length === 0) return showToast("目前所選隊伍沒有學員資料可匯出！", true);
+
+      // 匯出前先確保 currentSchedule 對應「檢視隊伍 + 檢視週次」
+      try {
+        const targetTeamForSchedule = (adminFilterTeamId !== "ALL" && adminFilterTeamId !== "NONE")
+          ? adminFilterTeamId
+          : (getAuthorizedTeamsForCurrentStaff()[0]?.id || null);
+        await loadScheduleForWeek(selectedWeekId, targetTeamForSchedule);
+      } catch (e) {}
 
       const dayHeadersWithDate = [0, 1, 2, 3, 4, 5, 6].map(dIdx => `${dayNames[dIdx]}(${getDayDateInfo(selectedWeekId, dIdx).ddmm})`);
       const exHeaders = currentSchedule.map(ex => `${ex.name}本週總計(${ex.unit})`);
@@ -3482,7 +3490,7 @@
     });
 
     document.getElementById("adminSortSelect").addEventListener("change", renderAdminStudentsOverviewTable);
-    document.getElementById("btnExportCSV").addEventListener("click", exportWeeklyCSV);
+    document.getElementById("btnExportCSV").addEventListener("click", () => { exportWeeklyCSV().catch(() => {}); });
 
     document.getElementById("adminOverviewSearchInput").addEventListener("input", renderAdminStudentsOverviewTable);
     document.getElementById("btnClearOverviewSearch").addEventListener("click", () => {
