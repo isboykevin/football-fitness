@@ -2546,8 +2546,9 @@
       }
 
       if (authTeams.length > 0) {
-        scheduleEditTeamId = authTeams[0].id;
-        scheduleTeamSelect.innerHTML = authTeams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join("");
+        const stillValid = scheduleEditTeamId && authTeams.some(t => t.id === scheduleEditTeamId);
+        if (!stillValid) scheduleEditTeamId = authTeams[0].id;
+        scheduleTeamSelect.innerHTML = authTeams.map(t => `<option value="${t.id}" ${t.id === scheduleEditTeamId ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join("");
       }
     }
 
