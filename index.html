@@ -103,6 +103,69 @@
     </div>
   </div>
 
+  <!-- iOS / Android 加入主畫面（變成 App）教學彈窗 -->
+  <div id="pwaGuideModalOverlay" class="fixed inset-0 bg-slate-900/65 backdrop-blur-sm z-50 hidden flex items-center justify-center px-4 safe-modal-overlay">
+    <div class="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border-2 border-emerald-400 animate-pop max-h-[88vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="text-lg sm:text-xl font-black text-slate-900">📲 將網頁加到手機主畫面</h3>
+        <button id="btnClosePwaGuideTop" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-black px-3 py-1 rounded-xl text-xs">✖ 關閉</button>
+      </div>
+      <p class="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 p-2.5 rounded-2xl mb-3">
+        💡 加到手機主畫面後，打開時會隱藏網址列並顯示專屬足球隊 Icon，好似真正 App 一樣咁方便！
+      </p>
+
+      <!-- iOS / Android 切換分頁按鈕 -->
+      <div class="grid grid-cols-2 gap-2 mb-4 bg-slate-100 p-1.5 rounded-2xl">
+        <button id="btnPwaTabIos" class="bg-white text-slate-900 font-black py-2 rounded-xl text-xs sm:text-sm shadow-sm transition">🍎 iPhone / iPad</button>
+        <button id="btnPwaTabAndroid" class="text-slate-600 font-bold py-2 rounded-xl text-xs sm:text-sm transition">🤖 Android 手機</button>
+      </div>
+
+      <!-- iOS 教學步驟 -->
+      <div id="pwaGuideIosContent" class="space-y-2.5 text-xs sm:text-sm">
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">1</span>
+          <p class="font-bold text-slate-700">請務必使用 iPhone 內置的 <strong class="text-blue-600">Safari 瀏覽器</strong> 打開本網頁。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">2</span>
+          <p class="font-bold text-slate-700">點擊畫面底部正中間的 <strong class="text-emerald-700">「分享」圖示 📤</strong>（方框入面有個向上箭咀）。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">3</span>
+          <p class="font-bold text-slate-700">在彈出的選單向下滑動，找到並點選 <strong class="text-emerald-700">「加入主畫面」➕</strong> (Add to Home Screen)。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">4</span>
+          <p class="font-bold text-slate-700">點擊右上角 <strong class="text-emerald-700">「新增」(Add)</strong>，手機桌面就會出現「足球體能打卡」App 圖示喇！🎉</p>
+        </div>
+      </div>
+
+      <!-- Android 教學步驟 -->
+      <div id="pwaGuideAndroidContent" class="hidden space-y-2.5 text-xs sm:text-sm">
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">1</span>
+          <p class="font-bold text-slate-700">請使用 <strong class="text-blue-600">Chrome 瀏覽器</strong> 打開本網頁。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">2</span>
+          <p class="font-bold text-slate-700">點擊畫面右上角的 <strong class="text-emerald-700">「⋮」選單按鈕</strong>（三個小圓點）。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">3</span>
+          <p class="font-bold text-slate-700">點選 <strong class="text-emerald-700">「加到主畫面」</strong> 或 <strong class="text-emerald-700">「安裝應用程式」</strong>。</p>
+        </div>
+        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex items-start gap-2.5">
+          <span class="bg-emerald-600 text-white font-black w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs">4</span>
+          <p class="font-bold text-slate-700">按確認 <strong class="text-emerald-700">「新增 / 安裝」</strong>，即可在手機主畫面直接打開 App！🎉</p>
+        </div>
+      </div>
+
+      <button id="btnClosePwaGuideBottom" class="w-full mt-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black py-3 rounded-2xl text-sm sm:text-base shadow-md">
+        👍🏻 明白晒！返回登入
+      </button>
+    </div>
+  </div>
+
   <!-- 頂部導航列（已加入 iPhone 瀏海與動態島 safe-area-inset-top 防遮擋保護，並自動讀取 icon.png） -->
   <header class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white sm:px-5 shadow-lg sticky top-0 z-30 safe-top-header">
     <div class="max-w-4xl mx-auto flex justify-between items-center gap-2">
@@ -172,6 +235,14 @@
             </button>
             <button id="btnGoRegister" class="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold py-3 px-3 rounded-2xl text-xs sm:text-sm transition">
               ➕ 新隊員／職員註冊
+            </button>
+          </div>
+
+          <!-- 新增：教你將網頁加到 iPhone / Android 主畫面按鈕 -->
+          <div class="pt-2 border-t border-slate-100">
+            <button id="btnOpenPwaGuide" type="button" class="w-full bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 text-emerald-900 font-black py-2.5 px-3 rounded-2xl text-xs sm:text-sm transition flex items-center justify-center gap-1.5">
+              <span>📲</span>
+              <span>點樣將網頁加到 iPhone / Android 主畫面（變成 App）？</span>
             </button>
           </div>
         </div>
@@ -645,7 +716,7 @@
               <h2 class="text-lg sm:text-xl font-black text-slate-800">👥 帳號密碼管理、職級調整、隊伍指派 及 刪除帳號</h2>
               <span id="userAdminCountBadge" class="text-xs font-black bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded-full">0 人</span>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5">只有總教練能在此搜尋及查看所有人的電話與密碼、重設密碼、指派隊伍，或永久刪除帳號及其所有資料庫紀錄。</p>
+            <p class="text-xs text-slate-500 mt-0.5">密碼採用不可逆雜湊保護；如學員忘記密碼，總教練可直接按「🔑 改密碼」為其重設新密碼。</p>
           </div>
           <select id="userAdminRoleFilter" class="w-full sm:w-auto bg-slate-100 border-2 border-slate-300 text-slate-800 font-bold rounded-xl p-2 text-xs sm:text-sm shrink-0">
             <option value="ALL">🔍 顯示所有身份（學員＋助教＋總教練）</option>
@@ -653,6 +724,22 @@
             <option value="admin">🛡️ 只顯示管理員（助教）</option>
             <option value="coach">👑 只顯示總教練</option>
           </select>
+        </div>
+
+        <!-- 總教練專屬：鎖定／開放「COACH888 / ADMIN888」職員註冊通道開關 -->
+        <div id="staffRegLockBanner" class="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-black text-amber-950">🛡️ 職員授權碼註冊通道保護鎖：</span>
+              <span id="staffRegLockStatusBadge" class="text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">🔓 目前開放註冊</span>
+            </div>
+            <p class="text-xs text-amber-900 font-bold mt-1">
+              當所有教練及助教完成註冊後，建議開啟此鎖定，防止外人透過授權碼自行註冊為總教練或助教。鎖定後你仍可在此頁面手動升級任何人的職級。
+            </p>
+          </div>
+          <button id="btnToggleStaffRegLock" class="bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow shrink-0 transition">
+            🔒 鎖定職員註冊通道
+          </button>
         </div>
 
         <!-- 總教練專屬：搜尋總教練、管理員(助教)或學員 -->
@@ -691,10 +778,12 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 常數設定：最多保存過往 20 週紀錄
+    // 常數設定：最多保存過往 20 週紀錄 & 1 小時本地快取有效期（大幅節省 80%+ Firestore 讀取量）
     const MAX_RETENTION_WEEKS = 20;
     const SESSION_STORAGE_KEY = "sen_football_session_v4";
-    const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v1";
+    const SETTINGS_CACHE_KEY = "sen_football_settings_cache_v2";
+    const SCHEDULES_CACHE_KEY = "sen_football_schedules_cache_v2";
+    const CACHE_TTL_MS = 60 * 60 * 1000; // 1 小時快取有效期
 
     // 自訂無障礙彈窗與 UI 輔助
     function showLoading(text = "正在連線同步資料...") {
@@ -812,8 +901,8 @@
       });
     }
 
-    // 單次請求超時保護（防止任何單一網絡請求卡住超過 8 秒）
-    function withTimeout(promise, ms = 8000) {
+    // 單次請求超時保護（設為 12 秒，避免手機剛喚醒時過早中斷）
+    function withTimeout(promise, ms = 12000) {
       return Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), ms))
@@ -821,11 +910,11 @@
     }
 
     // 自動重試包裝器
-    async function withRetry(fn, retries = 2, delayMs = 400) {
+    async function withRetry(fn, retries = 2, delayMs = 450) {
       let lastErr;
       for (let i = 0; i < retries; i++) {
         try {
-          return await withTimeout(fn(), 8000);
+          return await withTimeout(fn(), 12000);
         } catch (err) {
           lastErr = err;
           console.warn(`Firestore 請求重試中 (${i + 1}/${retries})...`, err);
@@ -956,6 +1045,7 @@
     let studentActiveTeamId = null;
     let adminFilterTeamId = "ALL";
     let scheduleEditTeamId = null;
+    let staffRegLocked = false; // 控制是否鎖定 COACH888 / ADMIN888 註冊通道
 
     let exerciseCatalog = {
       "ex_001": { id: "ex_001", name: "深蹲 🦵🏻", target: 20, unit: "下" },
@@ -1119,55 +1209,120 @@
       return total;
     }
 
+    // ==================== 1 小時本地快取機制（設定與課表） ====================
     function loadSettingsFromLocalCache() {
       try {
         const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
-        if (!raw) return;
+        if (!raw) return null;
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed.teamsList) && parsed.teamsList.length > 0) teamsList = parsed.teamsList;
         if (parsed.exerciseCatalog) exerciseCatalog = { ...exerciseCatalog, ...parsed.exerciseCatalog };
         if (Array.isArray(parsed.achievementsList) && parsed.achievementsList.length > 0) achievementsList = parsed.achievementsList;
-      } catch (e) {}
+        if (typeof parsed.staffRegLocked === "boolean") staffRegLocked = parsed.staffRegLocked;
+        return parsed;
+      } catch (e) {
+        return null;
+      }
     }
 
-    function saveSettingsToLocalCache() {
+    function saveSettingsToLocalCache(markFreshFromServer = false) {
       try {
+        const existing = loadSettingsFromLocalCache();
+        const lastFetchedAt = markFreshFromServer ? Date.now() : (existing?.lastFetchedAt || Date.now());
         localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify({
           teamsList,
           exerciseCatalog,
-          achievementsList
+          achievementsList,
+          staffRegLocked,
+          lastFetchedAt
         }));
       } catch (e) {}
     }
 
-    async function loadGlobalSettings() {
-      loadSettingsFromLocalCache();
+    // 載入全域設定：若距離上次讀取未滿 1 小時且非強制同步，直接沿用本地快取（0 次讀取！）
+    async function loadGlobalSettings(forceRefresh = false) {
+      const cached = loadSettingsFromLocalCache();
       renderRegistrationTeamCheckboxes();
 
-      const [teamsSnap, catSnap, achSnap] = await withRetry(() => Promise.all([
-        getDoc(doc(db, "settings", "teams")),
-        getDoc(doc(db, "settings", "exercise_catalog")),
-        getDoc(doc(db, "settings", "achievements"))
-      ]));
-
-      if (teamsSnap.exists() && Array.isArray(teamsSnap.data().list) && teamsSnap.data().list.length > 0) {
-        teamsList = teamsSnap.data().list;
-      } else {
-        setDoc(doc(db, "settings", "teams"), { list: teamsList }).catch(() => {});
+      const isCacheValid = cached && cached.lastFetchedAt && (Date.now() - cached.lastFetchedAt < CACHE_TTL_MS);
+      if (!forceRefresh && isCacheValid) {
+        return;
       }
 
-      if (catSnap.exists() && catSnap.data().catalog) {
-        exerciseCatalog = { ...exerciseCatalog, ...catSnap.data().catalog };
-      }
-      if (achSnap.exists() && Array.isArray(achSnap.data().list) && achSnap.data().list.length > 0) {
-        achievementsList = achSnap.data().list;
-      }
+      try {
+        const [teamsSnap, catSnap, achSnap] = await withRetry(() => Promise.all([
+          getDoc(doc(db, "settings", "teams")),
+          getDoc(doc(db, "settings", "exercise_catalog")),
+          getDoc(doc(db, "settings", "achievements"))
+        ]));
 
-      saveSettingsToLocalCache();
-      renderRegistrationTeamCheckboxes();
+        if (teamsSnap.exists()) {
+          const tData = teamsSnap.data();
+          if (Array.isArray(tData.list) && tData.list.length > 0) {
+            teamsList = tData.list;
+          }
+          staffRegLocked = Boolean(tData.staffRegLocked);
+        } else {
+          setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked: false }).catch(() => {});
+        }
+
+        if (catSnap.exists() && catSnap.data().catalog) {
+          exerciseCatalog = { ...exerciseCatalog, ...catSnap.data().catalog };
+        }
+        if (achSnap.exists() && Array.isArray(achSnap.data().list) && achSnap.data().list.length > 0) {
+          achievementsList = achSnap.data().list;
+        }
+
+        saveSettingsToLocalCache(true);
+        renderRegistrationTeamCheckboxes();
+      } catch (err) {
+        console.warn("讀取全域設定失敗，沿用本地快取：", err);
+        if (forceRefresh) throw err;
+      }
     }
 
-    async function loadScheduleForWeek(wId, teamId = null) {
+    function getSchedulesCacheObj() {
+      try {
+        const raw = localStorage.getItem(SCHEDULES_CACHE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveScheduleToLocalCache(cacheKey, exercisesArr) {
+      try {
+        const all = getSchedulesCacheObj();
+        all[cacheKey] = {
+          exercises: exercisesArr,
+          lastFetchedAt: Date.now()
+        };
+        localStorage.setItem(SCHEDULES_CACHE_KEY, JSON.stringify(all));
+      } catch (e) {}
+    }
+
+    function applyRawScheduleArray(rawList) {
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        currentSchedule = rawList.map((ex, idx) => {
+          const exId = ex.id || `ex_00${idx + 1}`;
+          const normalized = { id: exId, name: ex.name, target: Number(ex.target) || 10, unit: ex.unit || "下" };
+          exerciseCatalog[exId] = normalized;
+          return normalized;
+        });
+      }
+    }
+
+    // 載入週次課表：加入 1 小時本地快取，未滿 1 小時直接沿用快取（0 次讀取！）
+    async function loadScheduleForWeek(wId, teamId = null, forceRefresh = false) {
+      const cacheKey = `${wId}_${teamId || "ALL"}`;
+      const allCache = getSchedulesCacheObj();
+      const cachedEntry = allCache[cacheKey];
+
+      if (!forceRefresh && cachedEntry && cachedEntry.lastFetchedAt && (Date.now() - cachedEntry.lastFetchedAt < CACHE_TTL_MS)) {
+        applyRawScheduleArray(cachedEntry.exercises);
+        return;
+      }
+
       const fallbackOrder = [];
       if (teamId && teamId !== "ALL") {
         fallbackOrder.push(`${wId}_${teamId}`);
@@ -1176,25 +1331,32 @@
       fallbackOrder.push(wId);
       fallbackOrder.push("default");
 
-      const snaps = await withRetry(() => Promise.all(
-        fallbackOrder.map(docKey => getDoc(doc(db, "schedules", docKey)))
-      ));
+      try {
+        const snaps = await withRetry(() => Promise.all(
+          fallbackOrder.map(docKey => getDoc(doc(db, "schedules", docKey)))
+        ));
 
-      let rawList = null;
-      for (const snap of snaps) {
-        if (snap.exists() && Array.isArray(snap.data().exercises) && snap.data().exercises.length > 0) {
-          rawList = snap.data().exercises;
-          break;
+        let rawList = null;
+        for (const snap of snaps) {
+          if (snap.exists() && Array.isArray(snap.data().exercises) && snap.data().exercises.length > 0) {
+            rawList = snap.data().exercises;
+            break;
+          }
         }
-      }
 
-      if (rawList) {
-        currentSchedule = rawList.map((ex, idx) => {
-          const exId = ex.id || `ex_00${idx + 1}`;
-          const normalized = { id: exId, name: ex.name, target: Number(ex.target) || 10, unit: ex.unit || "下" };
-          exerciseCatalog[exId] = normalized;
-          return normalized;
-        });
+        if (rawList) {
+          applyRawScheduleArray(rawList);
+          saveScheduleToLocalCache(cacheKey, currentSchedule);
+          saveSettingsToLocalCache(false);
+        } else if (cachedEntry && cachedEntry.exercises) {
+          applyRawScheduleArray(cachedEntry.exercises);
+        }
+      } catch (err) {
+        console.warn("讀取課表失敗，沿用本地快取：", err);
+        if (cachedEntry && cachedEntry.exercises) {
+          applyRawScheduleArray(cachedEntry.exercises);
+        }
+        if (forceRefresh) throw err;
       }
     }
 
@@ -1214,6 +1376,13 @@
       const role = detectRoleByAuthCode(codeInput);
       const hintEl = document.getElementById("regRoleDetectHint");
       const teamWrap = document.getElementById("regTeamSelectWrap");
+
+      if ((role === "coach" || role === "admin") && staffRegLocked) {
+        hintEl.className = "text-xs font-black text-rose-700 bg-rose-100 px-2.5 py-1 rounded-lg mt-1.5";
+        hintEl.innerText = "🔒 總教練已鎖定職員授權碼註冊通道！請將授權碼留空以「學員」身份註冊，再由總教練於後台指派權限。";
+        teamWrap.classList.remove("hidden");
+        return;
+      }
 
       if (role === "coach") {
         hintEl.className = "text-xs font-black text-amber-700 bg-amber-100 px-2.5 py-1 rounded-lg mt-1.5";
@@ -1263,26 +1432,36 @@
       } catch (e) {}
 
       if (!cached || !cached.id) {
-        loadGlobalSettings().catch(() => {});
+        loadGlobalSettings(false).catch(() => {});
         return;
       }
 
-      showLoading(`歡迎回來，${cached.chineseName}！正在極速載入...`);
+      // 先以本地快取身份極速進入畫面，若距離上次驗證超過 1 小時才向伺服器更新用戶物件
+      currentUser = cached;
+      showLoading(`歡迎回來，${cached.chineseName}！正在載入...`);
       try {
-        const userSnap = await withRetry(() => getDoc(doc(db, "users", cached.id)));
-        if (userSnap.exists()) {
-          currentUser = { id: userSnap.id, ...userSnap.data() };
-          saveUserSession(currentUser);
-          await enterApp();
-        } else {
-          clearUserSession();
-          currentUser = null;
-          showToast("⚠️ 此帳號已不存在或已被移除，請重新登入。", true);
+        const isSessionFresh = cached.savedAt && (Date.now() - cached.savedAt < CACHE_TTL_MS);
+        if (!isSessionFresh) {
+          const userSnap = await withRetry(() => getDoc(doc(db, "users", cached.id)));
+          if (userSnap.exists()) {
+            currentUser = { id: userSnap.id, ...userSnap.data() };
+            saveUserSession(currentUser);
+          } else {
+            clearUserSession();
+            currentUser = null;
+            document.getElementById("userHeader").classList.add("hidden");
+            document.getElementById("studentSection").classList.add("hidden");
+            document.getElementById("adminSection").classList.add("hidden");
+            document.getElementById("authSection").classList.remove("hidden");
+            showToast("⚠️ 此帳號已不存在或已被移除，請重新登入。", true);
+            return;
+          }
         }
+        await enterApp(false);
       } catch (err) {
-        console.warn("自動恢復連線較慢，使用本地快取身份進入：", err);
+        console.warn("自動恢復連線較慢，使用本地快取進入：", err);
         currentUser = cached;
-        await enterApp();
+        await enterApp(false);
       } finally {
         hideLoading();
       }
@@ -1303,9 +1482,18 @@
         return;
       }
 
+      // 註冊前先確認最新的職員註冊鎖定狀態
+      await loadGlobalSettings(true).catch(() => {});
+
       const role = detectRoleByAuthCode(coachCode);
       if (coachCode && role === "student") {
         errBox.innerText = "⚠️ 你輸入的身份授權碼不正確！如你是學員請將授權碼留空。";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      if ((role === "coach" || role === "admin") && staffRegLocked) {
+        errBox.innerText = "🔒 總教練已鎖定職員授權碼註冊通道！請將授權碼留空以「學員」身份註冊，再聯絡總教練於後台指派權限。";
         errBox.classList.remove("hidden");
         return;
       }
@@ -1339,6 +1527,7 @@
         const uid = "user_" + Date.now();
         const passwordHash = hashPassword(password);
 
+        // 移除明文密碼表寫入，只儲存不可逆雜湊 passwordHash
         const userDoc = {
           chineseName,
           username,
@@ -1353,15 +1542,12 @@
           createdAt: formatLocalYMD(new Date())
         };
 
-        await withRetry(() => Promise.all([
-          setDoc(doc(db, "users", uid), userDoc),
-          setDoc(doc(db, "user_secrets", uid), { passwordPlain: password })
-        ]));
+        await withRetry(() => setDoc(doc(db, "users", uid), userDoc));
 
         currentUser = { id: uid, ...userDoc };
         saveUserSession(currentUser);
         showToast(`🎉 註冊成功！歡迎你，${chineseName}（${getRoleLabel(role)}）！`);
-        await enterApp();
+        await enterApp(false);
       } catch (err) {
         errBox.innerText = "⚠️ 網絡連線不穩定，請再按一次「完成註冊並自動登入」重試。";
         errBox.classList.remove("hidden");
@@ -1415,16 +1601,17 @@
         }
 
         if (!userData.passwordHash) {
-          await withRetry(() => Promise.all([
-            updateDoc(doc(db, "users", userData.id), { passwordHash: inputHash, usernameLower: (userData.username || "").toLowerCase() }),
-            setDoc(doc(db, "user_secrets", userData.id), { passwordPlain: pwd })
-          ]));
+          await withRetry(() => updateDoc(doc(db, "users", userData.id), {
+            passwordHash: inputHash,
+            password: "",
+            usernameLower: (userData.username || "").toLowerCase()
+          }));
         }
 
         currentUser = userData;
         saveUserSession(currentUser);
         showToast(`👋🏻 歡迎回來，${currentUser.chineseName}！`);
-        await enterApp();
+        await enterApp(false);
       } catch (err) {
         console.error("Login error:", err);
         errBox.innerText = "⚠️ 網絡連線稍慢，請再按一次「登入系統」！";
@@ -1480,7 +1667,7 @@
       }
     }
 
-    async function enterApp() {
+    async function enterApp(forceRefresh = false) {
       document.getElementById("authSection").classList.add("hidden");
       document.getElementById("userHeader").classList.remove("hidden");
       document.getElementById("currentUserBadge").innerText = `${currentUser.chineseName} (${getRoleLabel(currentUser.role)})`;
@@ -1495,22 +1682,24 @@
 
       showLoading("正在載入隊伍設定與體能紀錄...");
       try {
-        await loadGlobalSettings();
+        await loadGlobalSettings(forceRefresh);
 
         if (isStaff()) {
-          await initAdminDashboard();
+          await initAdminDashboard(forceRefresh);
         } else {
-          await initStudentDashboard();
+          await initStudentDashboard(forceRefresh);
         }
       } catch (err) {
-        console.error("初始化資料時發生錯誤:", err);
-        showToast("⚠️ 網絡較慢，可按右上角「🔄 同步」重新載入資料", true);
+        console.warn("初始化資料時部分請求延遲:", err);
+        if (forceRefresh) {
+          showToast("⚠️ 網絡較慢，請稍後再按「🔄 同步」重試", true);
+        }
       } finally {
         hideLoading();
       }
     }
 
-    async function initStudentDashboard() {
+    async function initStudentDashboard(forceRefresh = false) {
       const myTeamIds = getUserTeamIds(currentUser);
       studentActiveTeamId = myTeamIds[0] || (teamsList[0]?.id || null);
 
@@ -1530,7 +1719,7 @@
         switchWrap.classList.add("hidden");
       }
 
-      await loadScheduleForWeek(thisWeekId, studentActiveTeamId);
+      await loadScheduleForWeek(thisWeekId, studentActiveTeamId, forceRefresh);
 
       const prunedResult = await fetchAndPruneUserLogs20Weeks(currentUser);
       studentLogsMap = prunedResult.logsMap;
@@ -2105,7 +2294,7 @@
       });
     }
 
-    async function initAdminDashboard() {
+    async function initAdminDashboard(forceRefresh = false) {
       requireStaff();
 
       const roleBadge = document.getElementById("staffRoleBadge");
@@ -2145,17 +2334,15 @@
         `<option value="${w}">第${idx + 1}近週：${formatWeekRangeHK(w)}${w === thisWeekId ? '【本週】' : ''}</option>`
       ).join("");
 
-      await loadAdminWeekOverview(thisWeekId);
+      await loadAdminWeekOverview(thisWeekId, forceRefresh);
 
-      if (scheduleEditTeamId) {
-        await loadScheduleForWeek(selectedWeekId, scheduleEditTeamId);
-      }
       populateExerciseSelectors();
       renderScheduleEditor();
 
       if (isHeadCoach()) {
         renderTeamsManager();
         renderAdminAchievements();
+        renderStaffRegLockBanner();
         renderUserAdminList();
       }
     }
@@ -2193,29 +2380,33 @@
       }
     }
 
+    // 已移除 getDocs(collection(db, "user_secrets")) 全表讀取，每次登入為總教練省下數百次讀取！
     async function loadAdminUsersAndSecrets() {
       requireStaff();
-      const queries = [
-        getDocs(collection(db, "users"))
-      ];
-      if (isHeadCoach()) {
-        queries.push(getDocs(collection(db, "user_secrets")));
-      }
-
-      const results = await withRetry(() => Promise.all(queries));
-      const uSnap = results[0];
-      const sSnap = results[1] || null;
+      const uSnap = await withRetry(() => getDocs(collection(db, "users")));
 
       adminUsersList = [];
       uSnap.forEach(d => adminUsersList.push({ id: d.id, ...d.data() }));
-
-      adminSecretsMap = {};
-      if (sSnap) {
-        sSnap.forEach(d => { adminSecretsMap[d.id] = d.data().passwordPlain; });
-      }
     }
 
-    async function loadAdminWeekOverview(wId) {
+    // 按需單筆讀取（Lazy Load）：只有當某學員亮紅燈求助或總教練主動點擊查看舊密碼時，才單獨讀取 1 筆
+    async function fetchSingleUserSecretIfNeeded(uid) {
+      if (!isHeadCoach()) return null;
+      if (adminSecretsMap[uid] !== undefined) return adminSecretsMap[uid];
+      try {
+        const snap = await withRetry(() => getDoc(doc(db, "user_secrets", uid)));
+        if (snap.exists() && snap.data().passwordPlain) {
+          adminSecretsMap[uid] = snap.data().passwordPlain;
+        } else {
+          adminSecretsMap[uid] = null;
+        }
+      } catch (e) {
+        adminSecretsMap[uid] = null;
+      }
+      return adminSecretsMap[uid];
+    }
+
+    async function loadAdminWeekOverview(wId, forceRefresh = false) {
       requireStaff();
       selectedWeekId = wId;
       const targetTeamForSchedule = (adminFilterTeamId !== "ALL" && adminFilterTeamId !== "NONE")
@@ -2223,7 +2414,7 @@
         : (getAuthorizedTeamsForCurrentStaff()[0]?.id || null);
 
       const [, snap] = await withRetry(() => Promise.all([
-        loadScheduleForWeek(wId, targetTeamForSchedule),
+        loadScheduleForWeek(wId, targetTeamForSchedule, forceRefresh),
         getDocs(query(collection(db, "logs"), where("weekId", "==", wId)))
       ]));
 
@@ -2647,8 +2838,8 @@
       try {
         const newTeam = { id: "team_" + Date.now(), name: newName };
         teamsList.push(newTeam);
-        await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
-        saveSettingsToLocalCache();
+        await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
+        saveSettingsToLocalCache(true);
         nameInput.value = "";
         populateAdminTeamSelectors();
         renderRegistrationTeamCheckboxes();
@@ -2683,6 +2874,25 @@
           </div>
         </div>
       `).join("");
+    }
+
+    function renderStaffRegLockBanner() {
+      if (!isHeadCoach()) return;
+      const badge = document.getElementById("staffRegLockStatusBadge");
+      const btn = document.getElementById("btnToggleStaffRegLock");
+      if (!badge || !btn) return;
+
+      if (staffRegLocked) {
+        badge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-rose-600 text-white";
+        badge.innerText = "🔒 已鎖定（禁止外人用 COACH888 / ADMIN888 註冊）";
+        btn.className = "bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow shrink-0 transition";
+        btn.innerText = "🔓 重新開放職員註冊通道";
+      } else {
+        badge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800";
+        badge.innerText = "🔓 目前開放職員授權碼註冊";
+        btn.className = "bg-amber-600 hover:bg-amber-700 text-white font-black px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow shrink-0 transition";
+        btn.innerText = "🔒 鎖定職員註冊通道";
+      }
     }
 
     function renderUserAdminList() {
@@ -2720,8 +2930,24 @@
         return;
       }
 
+      // 若有亮起紅燈求助 (u.needHelp === true) 而尚未單筆讀取的帳號，按需單筆查詢其舊記錄
+      filteredUsers.forEach(u => {
+        if (u.needHelp && adminSecretsMap[u.id] === undefined) {
+          fetchSingleUserSecretIfNeeded(u.id).then(() => renderUserAdminList());
+        }
+      });
+
       container.innerHTML = filteredUsers.map(u => {
-        const plainPwd = adminSecretsMap[u.id] || u.password || "（可按右側重設）";
+        const cachedSecret = adminSecretsMap[u.id];
+        let pwdDisplayHtml = "";
+        if (cachedSecret) {
+          pwdDisplayHtml = `<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${cachedSecret}</strong>`;
+        } else if (cachedSecret === null) {
+          pwdDisplayHtml = `<span class="text-slate-500 font-bold">🔒 已加密保護（可按右側「🔑 改密碼」重設）</span>`;
+        } else {
+          pwdDisplayHtml = `<button data-viewpwduid="${u.id}" class="btn-admin-viewpwd text-xs font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 transition">👁️ 按需查看 / 狀態</button>`;
+        }
+
         const totalStars = Number(u.totalStars || 0);
         const uTeams = getUserTeamIds(u);
         const isSelf = currentUser && u.id === currentUser.id;
@@ -2747,10 +2973,10 @@
                 ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ 忘記密碼求助中！</span>` : ''}
               </div>
               <div class="flex flex-wrap gap-1">${teamsPillsHtml}</div>
-              <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap gap-x-3 gap-y-1">
+              <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <span>帳號：<strong>${u.username}</strong></span>
                 <span>電話：<strong>${u.phone}</strong></span>
-                <span>密碼（僅總教練可見）：<strong class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${plainPwd}</strong></span>
+                <span class="inline-flex items-center gap-1">密碼：${pwdDisplayHtml}</span>
               </div>
             </div>
             <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
@@ -2850,10 +3076,42 @@
       document.getElementById("loginCard").classList.remove("hidden");
     });
 
+    // iOS / Android 加入主畫面教學彈窗事件綁定
+    const pwaOverlay = document.getElementById("pwaGuideModalOverlay");
+    const btnPwaIos = document.getElementById("btnPwaTabIos");
+    const btnPwaAndroid = document.getElementById("btnPwaTabAndroid");
+    const iosContent = document.getElementById("pwaGuideIosContent");
+    const androidContent = document.getElementById("pwaGuideAndroidContent");
+
+    function switchPwaGuideTab(os) {
+      if (os === "android") {
+        iosContent.classList.add("hidden");
+        androidContent.classList.remove("hidden");
+        btnPwaAndroid.className = "bg-white text-slate-900 font-black py-2 rounded-xl text-xs sm:text-sm shadow-sm transition";
+        btnPwaIos.className = "text-slate-600 font-bold py-2 rounded-xl text-xs sm:text-sm transition";
+      } else {
+        androidContent.classList.add("hidden");
+        iosContent.classList.remove("hidden");
+        btnPwaIos.className = "bg-white text-slate-900 font-black py-2 rounded-xl text-xs sm:text-sm shadow-sm transition";
+        btnPwaAndroid.className = "text-slate-600 font-bold py-2 rounded-xl text-xs sm:text-sm transition";
+      }
+    }
+
+    document.getElementById("btnOpenPwaGuide").addEventListener("click", () => {
+      const isAndroid = /Android/i.test(navigator.userAgent || "");
+      switchPwaGuideTab(isAndroid ? "android" : "ios");
+      pwaOverlay.classList.remove("hidden");
+    });
+    document.getElementById("btnClosePwaGuideTop").addEventListener("click", () => pwaOverlay.classList.add("hidden"));
+    document.getElementById("btnClosePwaGuideBottom").addEventListener("click", () => pwaOverlay.classList.add("hidden"));
+    btnPwaIos.addEventListener("click", () => switchPwaGuideTab("ios"));
+    btnPwaAndroid.addEventListener("click", () => switchPwaGuideTab("android"));
+
+    // 按右上角「🔄 同步」時才強制重抓最新設定與課表
     document.getElementById("btnManualSync").addEventListener("click", async () => {
       if (!currentUser) return;
-      await enterApp();
-      showToast("✅ 已同步最新資料！");
+      await enterApp(true);
+      showToast("✅ 已強制從雲端同步最新課表與資料！");
     });
 
     document.getElementById("btnLogout").addEventListener("click", () => {
@@ -3085,8 +3343,8 @@
         teamsList[idx].name = newName;
         showLoading("正在更新隊伍名稱...");
         try {
-          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
-          saveSettingsToLocalCache();
+          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
+          saveSettingsToLocalCache(true);
           populateAdminTeamSelectors();
           renderRegistrationTeamCheckboxes();
           renderTeamsManager();
@@ -3115,8 +3373,8 @@
         showLoading("正在刪除隊伍...");
         try {
           teamsList.splice(idx, 1);
-          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
-          saveSettingsToLocalCache();
+          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
+          saveSettingsToLocalCache(true);
           populateAdminTeamSelectors();
           renderRegistrationTeamCheckboxes();
           renderTeamsManager();
@@ -3189,12 +3447,39 @@
       renderUserAdminList();
     });
 
+    // 總教練：一鍵鎖定／開放職員授權碼註冊通道
+    document.getElementById("btnToggleStaffRegLock").addEventListener("click", async () => {
+      requireHeadCoach();
+      const nextState = !staffRegLocked;
+      showLoading(nextState ? "正在鎖定職員授權碼註冊通道..." : "正在開放職員授權碼註冊通道...");
+      try {
+        staffRegLocked = nextState;
+        await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList, staffRegLocked }));
+        saveSettingsToLocalCache(true);
+        renderStaffRegLockBanner();
+        updateRegistrationCodeUI();
+        showToast(staffRegLocked
+          ? "🔒 已鎖定職員註冊通道！外人無法再以授權碼註冊為總教練或助教。"
+          : "🔓 已開放職員註冊通道！"
+        );
+      } finally {
+        hideLoading();
+      }
+    });
+
     document.getElementById("userAdminList").addEventListener("click", async (e) => {
+      const viewPwdBtn = e.target.closest(".btn-admin-viewpwd");
       const resetBtn = e.target.closest(".btn-admin-resetpwd");
       const assignBtn = e.target.closest(".btn-admin-assignteams");
       const deleteBtn = e.target.closest(".btn-admin-deleteuser");
 
-      if (deleteBtn) {
+      if (viewPwdBtn) {
+        requireHeadCoach();
+        const uid = viewPwdBtn.getAttribute("data-viewpwduid");
+        viewPwdBtn.innerText = "讀取中...";
+        await fetchSingleUserSecretIfNeeded(uid);
+        renderUserAdminList();
+      } else if (deleteBtn) {
         requireHeadCoach();
         const uid = deleteBtn.getAttribute("data-deleteuid");
         const name = deleteBtn.getAttribute("data-deletename");
@@ -3216,14 +3501,15 @@
         const cleanPwd = String(newPwd).trim();
         showLoading("正在重設密碼...");
         try {
+          // 只儲存不可逆雜湊 passwordHash 並移除舊明文記錄，同時在本機記憶體暫存方便總教練即時告知學員
           await withRetry(() => Promise.all([
             updateDoc(doc(db, "users", uid), { passwordHash: hashPassword(cleanPwd), needHelp: false, password: "" }),
-            setDoc(doc(db, "user_secrets", uid), { passwordPlain: cleanPwd })
+            deleteDoc(doc(db, "user_secrets", uid)).catch(() => {})
           ]));
           adminSecretsMap[uid] = cleanPwd;
           const targetU = adminUsersList.find(item => item.id === uid);
           if (targetU) targetU.needHelp = false;
-          showToast(`✅ 已將【${name}】的密碼更新為：${cleanPwd}`);
+          showToast(`✅ 已將【${name}】的密碼重設為：${cleanPwd}`);
           renderUserAdminList();
         } finally {
           hideLoading();
