@@ -397,7 +397,7 @@
 
         <!-- 🤖 AI 智能預測性分析面板（處理少於 4 週冷啟動與滿 4 週加權模型） -->
         <div class="bg-gradient-to-br from-indigo-950 via-slate-900 to-emerald-950 text-white rounded-3xl shadow-xl p-4 sm:p-6 border-2 border-emerald-400/80 space-y-4">
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-white/15 pb-3">
+          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-white/15 pb-3">
             <div>
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-xs font-black bg-emerald-400 text-slate-950 px-2.5 py-0.5 rounded-full">🤖 AI Predictive Analytics</span>
@@ -406,9 +406,15 @@
               <h3 data-i18n="predCardTitle" class="text-lg sm:text-xl font-black mt-1.5">🔮 下週表現預測與智能目標建議</h3>
               <p data-i18n="predCardSub" class="text-xs text-slate-300 mt-0.5">根據你過去 4 週（或現有週數）的得星率與動作增幅自動推算</p>
             </div>
-            <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-3 text-center w-full sm:w-auto shrink-0">
-              <span data-i18n="predProbLabel" class="text-[11px] font-bold text-emerald-200 block">下週達標（≥4星）預測機率</span>
-              <span id="stuPredPassProb" class="text-2xl sm:text-3xl font-black text-amber-300 mt-0.5 block">--%</span>
+            <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-2.5 sm:p-3 text-center">
+                <span data-i18n="predExpectedStarsLabel" class="text-[10px] sm:text-[11px] font-bold text-sky-200 block">預測下週得星數</span>
+                <span id="stuPredExpectedStars" class="text-xl sm:text-2xl font-black text-white mt-0.5 block">-- ★</span>
+              </div>
+              <div class="bg-white/10 backdrop-blur-sm border border-emerald-400/40 rounded-2xl p-2.5 sm:p-3 text-center">
+                <span data-i18n="predProbLabel" class="text-[10px] sm:text-[11px] font-bold text-emerald-200 block">下週達標(≥4星)機率</span>
+                <span id="stuPredPassProb" class="text-2xl sm:text-3xl font-black text-amber-300 mt-0.5 block">--%</span>
+              </div>
             </div>
           </div>
 
@@ -420,7 +426,7 @@
           </div>
 
           <div>
-            <h4 data-i18n="predExHeading" class="text-xs sm:text-sm font-black text-amber-300 mb-2">🎯 智能建議下週每日目標下數（Progressive Overload 漸進超負荷）：</h4>
+            <h4 data-i18n="predExHeading" class="text-xs sm:text-sm font-black text-amber-300 mb-2">🎯 智能建議下週每日目標下數（Progressive Overload 漸進式超負荷原則）：</h4>
             <div id="stuPredExercisesGrid" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5"></div>
           </div>
         </div>
@@ -874,8 +880,9 @@
         statKingWeeksSub: "單週 7 日全勤",
         predCardTitle: "🔮 下週表現預測與智能目標建議",
         predCardSub: "根據你過去 4 週（或現有週數）的得星率與動作增幅自動推算",
-        predProbLabel: "下週達標（≥4星）預測機率",
-        predExHeading: "🎯 智能建議下週每日目標下數（漸進式超負荷原則）：",
+        predExpectedStarsLabel: "預測下週得星數",
+        predProbLabel: "下週達標(≥4星)機率",
+        predExHeading: "🎯 智能建議下週每日目標下數（Progressive Overload 漸進式超負荷原則）：",
         stuGrowthChartTitle: "📈 我的進步成長曲線（近 20 週）",
         stuGrowthChartSub: "追蹤自己每星期的星數與體能動作進步幅度 💪🏻",
         stuHistoryLogTitle: "📜 我的歷週體能紀錄簿（最近 20 週）",
@@ -1015,7 +1022,8 @@
         statKingWeeksSub: "All 7 days completed",
         predCardTitle: "🔮 Next Week Forecast & Smart Target",
         predCardSub: "Calculated from your last 4 weeks (or available weeks) of stars & exercise progression",
-        predProbLabel: "Predicted Pass Probability (≥4★)",
+        predExpectedStarsLabel: "Expected Stars Next Wk",
+        predProbLabel: "Pass Probability (≥4★)",
         predExHeading: "🎯 Smart Recommended Daily Targets for Next Week (Progressive Overload):",
         stuGrowthChartTitle: "📈 My 20-Week Progression Curve",
         stuGrowthChartSub: "Track your weekly star count and exercise improvements 💪🏻",
@@ -1252,7 +1260,7 @@
         throw lastAuthError;
       }
 
-      // 僅在職員狀態下才進行 users 集合列表後備查找
+      // 僅在職員狀態下才進行 users 集合列表後備查找，符合 Firestore Rules (allow list: if isStaff())
       if (authUser && isStaff(currentUser)) {
         try {
           const idLower = trimmed.toLowerCase();
@@ -1754,16 +1762,17 @@
         const exRecs = scheduleList.map(ex => ({
           ex,
           avgVal: 0,
+          growthRatePct: 0,
           recommendedTarget: ex.target,
-          deltaPct: 0,
           mode: "baseline"
         }));
         return {
           activeWeeksCount: 0,
           passProbability: 50,
+          expectedNextStars: "4.0",
           avgStarsRecent: 0,
           momentumDelta: 0,
-          sampleBadgeText: currentLang === "en" ? "🌱 Baseline Mode (0 Wks Data)" : "🌱 新隊員基線模式（尚無打卡週次）",
+          sampleBadgeText: currentLang === "en" ? "🌱 Baseline Mode (0/4 Wks Data)" : "🌱 新隊員基線模式（累積 0/4 週數據）",
           summaryText: currentLang === "en"
             ? "Welcome! Complete your first workout check-in this week to unlock your personalized 4-week AI pass probability and target progression!"
             : "歡迎加入球隊！目前尚無歷史打卡紀錄（少於 4 週）。只要在本週完成第 1 次訓練打卡，系統就會立即為你啟動專屬預測模型！建議先以教練標準目標開始 💪🏻",
@@ -1796,6 +1805,9 @@
         momentumDelta = (starsDesc[0] - starsDesc[N - 1]) / 7.0;
       }
 
+      const expectedNextStarsNum = Math.max(1.0, Math.min(7.0, effectiveStars + momentumDelta * 1.4));
+      const expectedNextStars = expectedNextStarsNum.toFixed(1);
+
       const rawProb = (effectiveStars / 4.0) * 75 + (momentumDelta * 25);
       const passProbability = Math.max(18, Math.min(98, Math.round(rawProb)));
 
@@ -1806,8 +1818,8 @@
           ? `📊 Early Trend (${N}/4 Wks Data · Bayesian Smoothed)`
           : `📊 初步趨勢預測（累積 ${N}/4 週數據・已套用平滑校正）`;
         summaryText = currentLang === "en"
-          ? `You have ${N} week(s) of data (avg ${rawAvgStars.toFixed(1)}★/wk). Using Bayesian smoothing for <4 weeks, your estimated probability of hitting 4+ stars next week is ${passProbability}%. Keep checking in until 4 weeks for full precision!`
-          : `你目前已累積 ${N} 週紀錄（平均每週 ${rawAvgStars.toFixed(1)} 粒星）。由於紀錄少於 4 週，系統已自動啟動「少樣本平滑校正」，預測你下週達標（≥4星）機率為 ${passProbability}%！再累積 ${4 - N} 週即可解鎖完整 4 週模型 💪🏻`;
+          ? `You have ${N} week(s) of data (avg ${rawAvgStars.toFixed(1)}★/wk). Using Bayesian smoothing for <4 weeks, your estimated probability of hitting 4+ stars next week is ${passProbability}% (expected ~${expectedNextStars}★). Keep checking in until 4 weeks for full precision!`
+          : `你目前已累積 ${N} 週紀錄（平均每週 ${rawAvgStars.toFixed(1)} 粒星）。由於紀錄少於 4 週，系統已自動啟動「少樣本平滑校正」，預測你下週可得約 ${expectedNextStars} 粒星，達標（≥4星）機率為 ${passProbability}%！再累積 ${4 - N} 週即可解鎖完整 4 週模型 💪🏻`;
       } else {
         sampleBadgeText = currentLang === "en"
           ? `🎯 Full 4-Week Weighted Model (High Confidence)`
@@ -1815,40 +1827,54 @@
         const trendStrZh = momentumDelta > 0.05 ? "呈上升趨勢 📈" : (momentumDelta < -0.05 ? "近期稍有回落，加油追上 💪🏻" : "表現非常穩定 ✨");
         const trendStrEn = momentumDelta > 0.05 ? "trending upward 📈" : (momentumDelta < -0.05 ? "slightly dipping recently, keep pushing 💪🏻" : "very consistent ✨");
         summaryText = currentLang === "en"
-          ? `Based on your past 4 weeks (avg ${rawAvgStars.toFixed(1)}★/wk, ${trendStrEn}), your predicted probability of achieving 4+ stars next week is ${passProbability}%!`
-          : `根據你過去 4 週完整表現（平均每週 ${rawAvgStars.toFixed(1)} 粒星，${trendStrZh}），系統預測你下週達成 4 星合格的機率高達 ${passProbability}%！`;
+          ? `Based on your past 4 weeks (avg ${rawAvgStars.toFixed(1)}★/wk, ${trendStrEn}), your predicted probability of achieving 4+ stars next week is ${passProbability}% (expected ~${expectedNextStars}★)!`
+          : `根據你過去 4 週完整表現（平均每週 ${rawAvgStars.toFixed(1)} 粒星，${trendStrZh}），系統預測你下週可拿約 ${expectedNextStars} 粒星，達成 4 星合格的機率高達 ${passProbability}%！`;
       }
 
       const exRecommendations = scheduleList.map(ex => {
-        const vals = [];
+        const weeklyAvgs = [];
+        const allVals = [];
         lastUpTo4Weeks.forEach(w => {
           const daysObj = logsMap[w] || {};
+          const wVals = [];
           Object.values(daysObj).forEach(d => {
             if (d && d.completed && d.records) {
               const v = getExerciseValueFromRecord(d.records, ex);
-              if (v !== undefined && Number(v) > 0) vals.push(Number(v));
+              if (v !== undefined && Number(v) > 0) {
+                wVals.push(Number(v));
+                allVals.push(Number(v));
+              }
             }
           });
+          if (wVals.length > 0) {
+            weeklyAvgs.push(wVals.reduce((a, b) => a + b, 0) / wVals.length);
+          }
         });
 
         const step = ex.target >= 15 ? 5 : 1;
-        if (vals.length === 0) {
+        if (allVals.length === 0) {
           return {
             ex,
             avgVal: 0,
+            growthRatePct: 0,
             recommendedTarget: ex.target,
-            deltaPct: 0,
             mode: "baseline"
           };
         }
 
-        const avgVal = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+        const avgVal = Math.round(allVals.reduce((a, b) => a + b, 0) / allVals.length);
+        let growthRatePct = 0;
+        if (weeklyAvgs.length >= 2 && weeklyAvgs[0] > 0) {
+          growthRatePct = Math.round(((weeklyAvgs[weeklyAvgs.length - 1] - weeklyAvgs[0]) / weeklyAvgs[0]) * 100);
+        }
+
         let recommendedTarget = ex.target;
         let mode = "maintain";
 
         if (avgVal >= ex.target && rawAvgStars >= 3.5) {
-          // 已達標且穩定：漸進超負荷 +10%
-          recommendedTarget = Math.max(ex.target + step, roundToStep(avgVal * 1.10, step));
+          // 已達標且穩定：根據近期增幅與漸進超負荷原則建議 +10% ~ +15%
+          const boostFactor = growthRatePct > 10 ? 1.15 : 1.10;
+          recommendedTarget = Math.max(ex.target + step, roundToStep(avgVal * boostFactor, step));
           mode = "overload";
         } else if (avgVal < ex.target) {
           // 追趕中：階梯式建議（介於個人平均 +10% 與教練目標之間，不低於 70% 教練目標）
@@ -1861,13 +1887,13 @@
           mode = "maintain";
         }
 
-        const deltaPct = Math.round(((recommendedTarget - ex.target) / Math.max(1, ex.target)) * 100);
-        return { ex, avgVal, recommendedTarget, deltaPct, mode };
+        return { ex, avgVal, growthRatePct, recommendedTarget, mode };
       });
 
       return {
         activeWeeksCount: N,
         passProbability,
+        expectedNextStars,
         avgStarsRecent: rawAvgStars,
         momentumDelta,
         sampleBadgeText,
@@ -1879,12 +1905,14 @@
     function renderStudentPredictivePanel() {
       const pred = computePredictiveAnalytics(studentLogsMap, currentSchedule);
       const badgeEl = document.getElementById("stuPredSampleBadge");
+      const expStarsEl = document.getElementById("stuPredExpectedStars");
       const probEl = document.getElementById("stuPredPassProb");
       const barEl = document.getElementById("stuPredPassBar");
       const sumEl = document.getElementById("stuPredSummaryText");
       const gridEl = document.getElementById("stuPredExercisesGrid");
 
       if (badgeEl) badgeEl.innerText = pred.sampleBadgeText;
+      if (expStarsEl) expStarsEl.innerText = `${pred.expectedNextStars} ★`;
       if (probEl) probEl.innerText = `${pred.passProbability}%`;
       if (barEl) barEl.style.width = `${pred.passProbability}%`;
       if (sumEl) sumEl.innerText = pred.summaryText;
@@ -1895,15 +1923,19 @@
           const exUnit = escapeHtml(trText(item.ex.unit));
           let tagHtml = "";
           if (item.mode === "overload") {
-            tagHtml = `<span class="text-[10px] font-black bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">🚀 ${currentLang === "en" ? "Level Up +10%" : "進階挑戰"}</span>`;
+            tagHtml = `<span class="text-[10px] font-black bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">🚀 ${currentLang === "en" ? "Level Up" : "進階挑戰"}</span>`;
           } else if (item.mode === "stepup") {
             tagHtml = `<span class="text-[10px] font-black bg-sky-400 text-slate-950 px-2 py-0.5 rounded-full">🪜 ${currentLang === "en" ? "Step-by-Step" : "循序漸進"}</span>`;
           } else {
             tagHtml = `<span class="text-[10px] font-black bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full">✅ ${currentLang === "en" ? "Standard" : "標準目標"}</span>`;
           }
 
+          const growthStr = item.growthRatePct !== 0
+            ? ` (${item.growthRatePct > 0 ? '+' : ''}${item.growthRatePct}%)`
+            : "";
+
           const avgText = item.avgVal > 0
-            ? (currentLang === "en" ? `Recent Avg: ${item.avgVal} ${exUnit}` : `近期平均：${item.avgVal} ${exUnit}`)
+            ? (currentLang === "en" ? `Recent Avg: ${item.avgVal} ${exUnit}${growthStr}` : `近期平均：${item.avgVal} ${exUnit}${growthStr}`)
             : (currentLang === "en" ? `Coach Target: ${item.ex.target} ${exUnit}` : `教練目標：${item.ex.target} ${exUnit}`);
 
           return `
@@ -2407,6 +2439,10 @@
 
         currentUser = userData;
         await bindAuthSession(currentUser);
+        await writeUserLookupIndexes(userData.id, {
+          username: userData.username,
+          phone: userData.phone
+        });
 
         if (!userData.passwordHash || userData.password) {
           await withRetry(() => updateDoc(doc(db, "users", userData.id), {
@@ -3166,7 +3202,6 @@
         renderStudentGrowthChart();
       }
     }
-
     // ==========================================
     // 🛡️ 教練與助教管理後台
     // ==========================================
@@ -3193,7 +3228,7 @@
         btnUsers.classList.remove("hidden");
         btnSyncAllSchedule.classList.remove("hidden");
       } else {
-        const myTeamNames = getAuthorizedTeamsForCurrentStaff().map(t => trText(t.name)).join(", ") || (currentLang === "en" ? "Unassigned" : "尚未指派隊伍");
+        const myTeamNames = getAuthorizedTeamsForCurrentStaff().map(t => trText(t.name)).join(currentLang === "en" ? ", " : "、") || (currentLang === "en" ? "Unassigned" : "尚未指派隊伍");
         roleBadge.className = "text-xs font-black px-2.5 py-0.5 rounded-full bg-purple-400 text-slate-950";
         roleBadge.innerText = currentLang === "en" ? "🛡️ Assistant Coach" : "🛡️ 管理員（助教）權限";
         scopeDesc.innerText = currentLang === "en"
@@ -3212,12 +3247,12 @@
       admSelect.innerHTML = allowed20Weeks.map((w, idx) => {
         const prefix = currentLang === "en" ? `Wk -${idx}: ` : `第${idx + 1}近週：`;
         const tag = w === thisWeekId ? (currentLang === "en" ? " [This Week]" : "【本週】") : "";
-        return `<option value="${w}">${prefix}${formatWeekRangeHK(w)}${tag}</option>`;
+        return `<option value="${w}" ${w === selectedWeekId ? 'selected' : ''}>${prefix}${formatWeekRangeHK(w)}${tag}</option>`;
       }).join("");
 
       try {
         await loadAdminUsers();
-        await loadAdminWeekOverview(thisWeekId, forceRefresh);
+        await loadAdminWeekOverview(selectedWeekId || thisWeekId, forceRefresh);
 
         if (isHeadCoach()) {
           renderTeamsManager();
@@ -3239,16 +3274,20 @@
       if (isHeadCoach()) {
         filterSelect.innerHTML = [
           `<option value="ALL">🌐 ${currentLang === "en" ? `All Teams (${teamsList.length})` : `全部隊伍（共 ${teamsList.length} 隊）`}</option>`,
-          ...teamsList.map(t => `<option value="${escapeHtml(t.id)}">🚩 ${escapeHtml(trText(t.name))}</option>`)
+          ...teamsList.map(t => `<option value="${escapeHtml(t.id)}" ${adminFilterTeamId === t.id ? 'selected' : ''}>🚩 ${escapeHtml(trText(t.name))}</option>`)
         ].join("");
-        adminFilterTeamId = "ALL";
+        if (!adminFilterTeamId || (adminFilterTeamId !== "ALL" && !teamsList.some(t => t.id === adminFilterTeamId))) {
+          adminFilterTeamId = "ALL";
+        }
       } else {
         if (authTeams.length > 1) {
           filterSelect.innerHTML = [
             `<option value="ALL">🚩 ${currentLang === "en" ? `All My Squads (${authTeams.length})` : `我負責的全部隊伍（${authTeams.length} 隊）`}</option>`,
-            ...authTeams.map(t => `<option value="${escapeHtml(t.id)}">🚩 ${escapeHtml(trText(t.name))}</option>`)
+            ...authTeams.map(t => `<option value="${escapeHtml(t.id)}" ${adminFilterTeamId === t.id ? 'selected' : ''}>🚩 ${escapeHtml(trText(t.name))}</option>`)
           ].join("");
-          adminFilterTeamId = "ALL";
+          if (!adminFilterTeamId || (adminFilterTeamId !== "ALL" && !authTeams.some(t => t.id === adminFilterTeamId))) {
+            adminFilterTeamId = "ALL";
+          }
         } else if (authTeams.length === 1) {
           filterSelect.innerHTML = `<option value="${escapeHtml(authTeams[0].id)}">🚩 ${escapeHtml(trText(authTeams[0].name))}</option>`;
           adminFilterTeamId = authTeams[0].id;
@@ -3259,8 +3298,12 @@
       }
 
       if (authTeams.length > 0) {
-        scheduleEditTeamId = authTeams[0].id;
-        scheduleTeamSelect.innerHTML = authTeams.map(t => `<option value="${escapeHtml(t.id)}">${escapeHtml(trText(t.name))}</option>`).join("");
+        if (!scheduleEditTeamId || !authTeams.some(t => t.id === scheduleEditTeamId)) {
+          scheduleEditTeamId = authTeams[0].id;
+        }
+        scheduleTeamSelect.innerHTML = authTeams.map(t =>
+          `<option value="${escapeHtml(t.id)}" ${t.id === scheduleEditTeamId ? 'selected' : ''}>${escapeHtml(trText(t.name))}</option>`
+        ).join("");
       }
     }
 
@@ -3314,7 +3357,7 @@
       if (headingEl) {
         const teamTitle = adminFilterTeamId === "ALL"
           ? (isHeadCoach() ? (currentLang === "en" ? "All Teams" : "全部隊伍") : (currentLang === "en" ? "My Squads" : "我負責的隊伍"))
-          : (adminFilterTeamId === "NONE" ? "Unassigned" : getTeamNameById(adminFilterTeamId));
+          : (adminFilterTeamId === "NONE" ? (currentLang === "en" ? "Unassigned" : "尚未指派隊伍") : getTeamNameById(adminFilterTeamId));
         headingEl.innerText = currentLang === "en"
           ? `🏆 Player Fitness Overview (${teamTitle})`
           : `🏆 學員體能表現總覽（${teamTitle}）`;
@@ -3463,9 +3506,10 @@
       const box = document.getElementById("coachPredictionBox");
       if (!box || !inspectedStudent) return;
       const pred = computePredictiveAnalytics(inspectedStudentLogs, currentSchedule);
-      const exTags = pred.exRecommendations.map(item =>
-        `<span class="bg-white/10 border border-white/20 px-2.5 py-1 rounded-xl text-xs font-bold">${escapeHtml(trText(item.ex.name))}: <strong class="text-emerald-300">${item.recommendedTarget} ${escapeHtml(trText(item.ex.unit))}</strong></span>`
-      ).join(" ");
+      const exTags = pred.exRecommendations.map(item => {
+        const gStr = item.growthRatePct !== 0 ? ` (${item.growthRatePct > 0 ? '+' : ''}${item.growthRatePct}%)` : "";
+        return `<span class="bg-white/10 border border-white/20 px-2.5 py-1 rounded-xl text-xs font-bold">${escapeHtml(trText(item.ex.name))}: <strong class="text-emerald-300">${item.recommendedTarget} ${escapeHtml(trText(item.ex.unit))}</strong><span class="text-slate-300 text-[11px]">${gStr}</span></span>`;
+      }).join(" ");
 
       box.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-2">
@@ -3473,7 +3517,10 @@
             <span class="text-[11px] font-black bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full">🤖 AI Forecast</span>
             <span class="text-xs text-emerald-200 font-bold ml-1">${escapeHtml(pred.sampleBadgeText)}</span>
           </div>
-          <span class="text-sm sm:text-base font-black text-amber-300">${currentLang === "en" ? "Next Wk Pass Prob:" : "下週達標預測機率："} ${pred.passProbability}%</span>
+          <div class="flex items-center gap-3">
+            <span class="text-xs sm:text-sm font-black text-sky-300">${currentLang === "en" ? "Expected:" : "預測下週："} ${pred.expectedNextStars} ★</span>
+            <span class="text-sm sm:text-base font-black text-amber-300">${currentLang === "en" ? "Pass Prob:" : "達標機率："} ${pred.passProbability}%</span>
+          </div>
         </div>
         <p class="text-xs text-slate-200 font-bold mb-2">${escapeHtml(pred.summaryText)}</p>
         <div class="flex flex-wrap gap-1.5">${exTags}</div>
@@ -3869,7 +3916,7 @@
       if (countBadge) {
         countBadge.innerText = searchKw
           ? `${filteredUsers.length} / ${roleScopedUsers.length}`
-          : `${filteredUsers.length}`;
+          : (currentLang === "en" ? `${filteredUsers.length} Accounts` : `共 ${filteredUsers.length} 個帳號`);
       }
 
       const container = document.getElementById("userAdminList");
@@ -3902,4 +3949,788 @@
           <div class="border-2 rounded-2xl p-3.5 sm:p-4 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 ${u.needHelp ? 'bg-rose-50 border-rose-400' : 'bg-slate-50 border-slate-200'}">
             <div class="min-w-0 space-y-1.5 w-full lg:w-auto">
               <div class="flex items-center flex-wrap gap-2">
-                <span class="text-base sm:text-lg font-black text-slate-900">${escapeHtml(u
+                <span class="text-base sm:text-lg font-black text-slate-900">${escapeHtml(u.chineseName)}</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-black ${roleBadgeClass}">
+                  ${getRoleLabel(u.role)}
+                </span>
+                ${isSelf ? `<span class="text-[11px] font-black bg-emerald-600 text-white px-2 py-0.5 rounded-full">${currentLang === "en" ? "Current User" : "目前登入中"}</span>` : ''}
+                ${u.role === 'student' ? `<span class="text-xs font-black bg-indigo-100 text-indigo-800 px-2.5 py-0.5 rounded-full">🏆 ${totalStars} ★</span>` : ''}
+                ${u.needHelp ? `<span class="bg-rose-600 text-white text-xs px-2.5 py-0.5 rounded-full font-black animate-pulse">⚠️ ${currentLang === "en" ? "Password Help Requested!" : "忘記密碼求助中！"}</span>` : ''}
+              </div>
+              <div class="flex flex-wrap gap-1">${teamsPillsHtml}</div>
+              <div class="text-xs sm:text-sm text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>${currentLang === "en" ? "User:" : "帳號："}<strong>${escapeHtml(u.username)}</strong></span>
+                <span>${currentLang === "en" ? "Phone:" : "電話："}<strong>${escapeHtml(u.phone)}</strong></span>
+                <span class="inline-flex items-center gap-1">${currentLang === "en" ? "Pwd:" : "密碼狀態："}${pwdDisplayHtml}</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+              ${u.role !== 'coach' ? `
+                <button type="button" data-assignteamuid="${escapeHtml(u.id)}" class="btn-admin-assignteams flex-1 sm:flex-initial bg-blue-600 hover:bg-blue-700 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
+                  🚩 ${currentLang === "en" ? "Assign Squads" : "分配隊伍"}
+                </button>
+              ` : ''}
+              <button type="button" data-resetuid="${escapeHtml(u.id)}" data-resetname="${escapeHtml(u.chineseName)}" class="btn-admin-resetpwd flex-1 sm:flex-initial bg-amber-500 hover:bg-amber-600 text-white text-xs font-black px-3 py-2.5 rounded-xl shadow-sm">
+                🔑 ${currentLang === "en" ? "Reset Pwd" : "改密碼"}
+              </button>
+              <select data-changeroleuid="${escapeHtml(u.id)}" class="sel-admin-changerole bg-purple-50 border-2 border-purple-300 text-purple-950 text-xs font-black px-2.5 py-2 rounded-xl">
+                <option value="student" ${u.role === 'student' ? 'selected' : ''}>${currentLang === "en" ? "Role: ⚽ Player" : "設為：⚽ 學員"}</option>
+                <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>${currentLang === "en" ? "Role: 🛡️ Assistant" : "設為：🛡️ 管理員(助教)"}</option>
+                <option value="coach" ${u.role === 'coach' ? 'selected' : ''}>${currentLang === "en" ? "Role: 👑 Head Coach" : "設為：👑 總教練"}</option>
+              </select>
+              <button type="button" data-deleteuid="${escapeHtml(u.id)}" data-deletename="${escapeHtml(u.chineseName)}" class="btn-admin-deleteuser bg-rose-100 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-300 text-xs font-black px-3 py-2 rounded-xl transition shrink-0">
+                🗑️ ${currentLang === "en" ? "Delete" : "刪除帳號"}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function handleDeleteUserAccount(uid, name) {
+      requireHeadCoach();
+      if (currentUser && uid === currentUser.id) {
+        return showToast(currentLang === "en"
+          ? "⚠️ Safety protection: You cannot delete your own active Head Coach account!"
+          : "⚠️ 安全保護：你不能刪除自己目前正在登入使用的總教練帳號！", true);
+      }
+
+      const targetUser = adminUsersList.find(u => u.id === uid);
+      const roleStr = targetUser ? getRoleLabel(targetUser.role) : (currentLang === "en" ? "Account" : "帳號");
+
+      const confirmed = await openCustomModal({
+        icon: "⚠️",
+        title: currentLang === "en" ? `Permanently Delete [${name}]?` : `確認永久刪除【${name}】？`,
+        message: currentLang === "en"
+          ? `You are about to delete ${roleStr} "${name}" (@${targetUser?.username || ''}).\n\nThis will permanently remove:\n1. User profile (users)\n2. Lookup indexes (user_lookup)\n3. All workout logs & stars (logs)\nThis action cannot be undone!`
+          : `你即將刪除 ${roleStr}「${name}」（@${targetUser?.username || ''}）。\n\n一旦確認，系統會將該帳號的：\n1. 個人帳號資料 (users)\n2. 單筆查找索引 (user_lookup)\n3. 所有歷史體能打卡紀錄與星星 (logs)\n全部從資料庫永久移除且無法復原！確定要執行嗎？`,
+        showCancel: true,
+        confirmText: currentLang === "en" ? "🗑️ Delete Permanently" : "🗑️ 確認永久刪除",
+        cancelText: currentLang === "en" ? "Cancel" : "取消"
+      });
+      if (!confirmed) return;
+
+      showLoading(currentLang === "en" ? `Deleting [${name}]...` : `正在從資料庫徹底移除【${name}】的所有資料...`);
+      try {
+        await ensureAuthReady(true);
+        const logsSnap = await withRetry(() => getDocs(query(collection(db, "logs"), where("userId", "==", uid))));
+
+        const batch = writeBatch(db);
+        logsSnap.forEach(d => {
+          batch.delete(doc(db, "logs", d.id));
+        });
+
+        batch.delete(doc(db, "users", uid));
+        batch.delete(doc(db, "user_secrets", uid));
+
+        if (targetUser) {
+          const uKey = normalizeLookupKey("u", targetUser.username);
+          const pKey = normalizeLookupKey("p", targetUser.phone);
+          const nKey = normalizeLookupKey("n", targetUser.chineseName);
+          if (uKey) batch.delete(doc(db, "user_lookup", uKey));
+          if (pKey) batch.delete(doc(db, "user_lookup", pKey));
+          if (nKey) {
+            const nSnap = await getDoc(doc(db, "user_lookup", nKey)).catch(() => null);
+            if (nSnap && nSnap.exists() && nSnap.data()?.userId === uid) {
+              batch.delete(doc(db, "user_lookup", nKey));
+            }
+          }
+        }
+
+        await withRetry(() => batch.commit());
+
+        adminUsersList = adminUsersList.filter(u => u.id !== uid);
+        delete sessionResetPasswordsMap[uid];
+        delete adminWeekLogsMap[uid];
+
+        if (inspectedStudent && inspectedStudent.id === uid) {
+          document.getElementById("coachStudentInspector").classList.add("hidden");
+          inspectedStudent = null;
+        }
+
+        renderUserAdminList();
+        renderTeamsManager();
+        renderAdminStudentsOverviewTable();
+        showToast(currentLang === "en" ? `🗑️ Permanently deleted [${name}]!` : `🗑️ 已徹底刪除【${name}】的帳號及所有資料庫紀錄！`);
+      } catch (err) {
+        console.error("刪除帳號失敗:", err);
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // ==========================================
+    // 🌐 語言切換與全畫面即時重繪邏輯
+    // ==========================================
+    document.getElementById("btnLangToggle").addEventListener("click", () => {
+      currentLang = currentLang === "en" ? "zh" : "en";
+      try {
+        localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+      } catch (e) {}
+
+      applyStaticTranslations();
+      renderRegistrationTeamCheckboxes();
+
+      if (!currentUser) return;
+
+      document.getElementById("currentUserBadge").innerText = `${currentUser.chineseName} (${getRoleLabel(currentUser.role)})`;
+
+      if (isStaff(currentUser)) {
+        const roleBadge = document.getElementById("staffRoleBadge");
+        const scopeDesc = document.getElementById("staffScopeDesc");
+        if (isHeadCoach()) {
+          roleBadge.innerText = currentLang === "en" ? "👑 Head Coach Access" : "👑 總教練最高權限";
+          scopeDesc.innerText = currentLang === "en"
+            ? "Full system privileges: view all squads, manage teams, sync schedules, and manage user accounts."
+            : "你擁有全系統最高權限：可檢視所有隊伍、管理梯隊名稱、同步全隊課表、搜尋及管理所有帳號密碼與權限。";
+        } else {
+          const myTeamNames = getAuthorizedTeamsForCurrentStaff().map(t => trText(t.name)).join(currentLang === "en" ? ", " : "、") || (currentLang === "en" ? "Unassigned" : "尚未指派隊伍");
+          roleBadge.innerText = currentLang === "en" ? "🛡️ Assistant Coach" : "🛡️ 管理員（助教）權限";
+          scopeDesc.innerText = currentLang === "en"
+            ? `Authorized Squad(s): [${myTeamNames}]. You can inspect and manage training logs for players in your squad.`
+            : `你獲授權協助的隊伍：【${myTeamNames}】。為保障私隱，你只可檢視及管理所屬隊伍學員的訓練數據。`;
+        }
+
+        populateAdminTeamSelectors();
+        const admSelect = document.getElementById("adminWeekSelect");
+        if (admSelect) {
+          admSelect.innerHTML = allowed20Weeks.map((w, idx) => {
+            const prefix = currentLang === "en" ? `Wk -${idx}: ` : `第${idx + 1}近週：`;
+            const tag = w === thisWeekId ? (currentLang === "en" ? " [This Week]" : "【本週】") : "";
+            return `<option value="${w}" ${w === selectedWeekId ? 'selected' : ''}>${prefix}${formatWeekRangeHK(w)}${tag}</option>`;
+          }).join("");
+        }
+
+        populateExerciseSelectors();
+        renderScheduleEditor();
+        renderAdminStudentsOverviewTable();
+        if (isHeadCoach()) {
+          renderTeamsManager();
+          renderAdminAchievements();
+          renderUserAdminList();
+        }
+        if (inspectedStudent) {
+          document.getElementById("coachEditWeekLabel").innerText = currentLang === "en"
+            ? `Editing Week: ${formatWeekRangeHK(selectedWeekId)}`
+            : `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
+          updateInspectorLifetimeBanner();
+          renderCoachStudentPrediction();
+          renderCoachStudentGrowthChart();
+          renderCoachStudentEditor();
+        }
+      } else {
+        const myTeamIds = getUserTeamIds(currentUser);
+        document.getElementById("stuMyTeamsBadges").innerHTML = myTeamIds.map(tid => 
+          `<span class="text-xs font-black bg-emerald-100 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-full">🚩 ${escapeHtml(getTeamNameById(tid))}</span>`
+        ).join("");
+
+        const activeTeamSelect = document.getElementById("stuActiveTeamSelect");
+        if (activeTeamSelect && myTeamIds.length > 1) {
+          activeTeamSelect.innerHTML = myTeamIds.map(tid => 
+            `<option value="${escapeHtml(tid)}" ${tid === studentActiveTeamId ? 'selected' : ''}>${escapeHtml(getTeamNameById(tid))}</option>`
+          ).join("");
+        }
+
+        const selectEl = document.getElementById("studentWeekSelect");
+        if (selectEl) {
+          selectEl.innerHTML = allowed20Weeks.map((w, idx) => {
+            const rangeStr = formatWeekRangeHK(w);
+            const stars = Object.values(studentLogsMap[w] || {}).filter(d => d && d.completed).length;
+            const tag = w === thisWeekId
+              ? (currentLang === "en" ? "[This Week · Active]" : "【本週・可打卡】")
+              : `(${stars}★)`;
+            const wkPrefix = currentLang === "en" ? `Wk -${idx}: ` : `第${idx + 1}近週：`;
+            return `<option value="${w}" ${w === selectedWeekId ? 'selected' : ''}>${wkPrefix}${rangeStr} ${tag}</option>`;
+          }).join("");
+        }
+
+        populateExerciseSelectors();
+        renderStudentWeekView();
+        renderStudentPredictivePanel();
+        renderStudentGrowthChart();
+        renderStudentHistoryList();
+        renderStudentAchievements();
+      }
+    });
+
+    // ==========================================
+    // 🎮 全局事件監聽器綁定
+    // ==========================================
+    document.getElementById("toggleLoginPwd").addEventListener("change", (e) => {
+      document.getElementById("loginPassword").type = e.target.checked ? "text" : "password";
+    });
+    document.getElementById("btnLogin").addEventListener("click", handleLogin);
+    document.getElementById("loginPassword").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleLogin();
+    });
+    document.getElementById("btnRegister").addEventListener("click", handleRegister);
+    document.getElementById("btnForgotPwd").addEventListener("click", handleForgotPassword);
+    document.getElementById("btnGoRegister").addEventListener("click", async () => {
+      document.getElementById("loginCard").classList.add("hidden");
+      document.getElementById("registerCard").classList.remove("hidden");
+      await loadGlobalSettings(false).catch(() => {});
+    });
+    document.getElementById("btnBackLogin").addEventListener("click", () => {
+      document.getElementById("registerCard").classList.add("hidden");
+      document.getElementById("loginCard").classList.remove("hidden");
+    });
+
+    const pwaOverlay = document.getElementById("pwaGuideModalOverlay");
+    const btnPwaIos = document.getElementById("btnPwaTabIos");
+    const btnPwaAndroid = document.getElementById("btnPwaTabAndroid");
+    const iosContent = document.getElementById("pwaGuideIosContent");
+    const androidContent = document.getElementById("pwaGuideAndroidContent");
+
+    function switchPwaGuideTab(os) {
+      if (os === "android") {
+        iosContent.classList.add("hidden");
+        androidContent.classList.remove("hidden");
+        btnPwaAndroid.className = "bg-white text-slate-900 font-black py-2 rounded-xl text-xs sm:text-sm shadow-sm transition";
+        btnPwaIos.className = "text-slate-600 font-bold py-2 rounded-xl text-xs sm:text-sm transition";
+      } else {
+        androidContent.classList.add("hidden");
+        iosContent.classList.remove("hidden");
+        btnPwaIos.className = "bg-white text-slate-900 font-black py-2 rounded-xl text-xs sm:text-sm shadow-sm transition";
+        btnPwaAndroid.className = "text-slate-600 font-bold py-2 rounded-xl text-xs sm:text-sm transition";
+      }
+    }
+
+    document.getElementById("btnOpenPwaGuide").addEventListener("click", () => {
+      const isAndroid = /Android/i.test(navigator.userAgent || "");
+      switchPwaGuideTab(isAndroid ? "android" : "ios");
+      pwaOverlay.classList.remove("hidden");
+    });
+    document.getElementById("btnClosePwaGuideTop").addEventListener("click", () => pwaOverlay.classList.add("hidden"));
+    document.getElementById("btnClosePwaGuideBottom").addEventListener("click", () => pwaOverlay.classList.add("hidden"));
+    btnPwaIos.addEventListener("click", () => switchPwaGuideTab("ios"));
+    btnPwaAndroid.addEventListener("click", () => switchPwaGuideTab("android"));
+
+    document.getElementById("btnManualSync").addEventListener("click", async () => {
+      if (!currentUser) return;
+      await enterApp(true);
+      showToast(currentLang === "en" ? "✅ Cloud data synced!" : "✅ 已強制從雲端同步最新課表與資料！");
+    });
+
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      clearUserSession();
+      currentUser = null;
+      location.reload();
+    });
+
+    document.getElementById("stuActiveTeamSelect").addEventListener("change", async (e) => {
+      studentActiveTeamId = e.target.value;
+      showLoading(currentLang === "en" ? `Switching schedule...` : `正在切換至【${getTeamNameById(studentActiveTeamId)}】課表...`);
+      try {
+        await loadScheduleForWeek(selectedWeekId, studentActiveTeamId);
+        populateExerciseSelectors();
+        renderStudentWeekView();
+        renderStudentPredictivePanel();
+      } finally {
+        hideLoading();
+      }
+    });
+
+    const jumpToThisWeekHandler = async () => {
+      selectedWeekId = thisWeekId;
+      document.getElementById("studentWeekSelect").value = thisWeekId;
+      await loadScheduleForWeek(thisWeekId, studentActiveTeamId);
+      currentDayIndex = todayDayIndex;
+      populateExerciseSelectors();
+      renderStudentWeekView();
+      showToast(currentLang === "en" ? "📅 Returned to this week!" : "📅 已返回本週打卡畫面！");
+    };
+    document.getElementById("btnJumpThisWeek").addEventListener("click", jumpToThisWeekHandler);
+    document.getElementById("btnJumpThisWeekDesktop").addEventListener("click", jumpToThisWeekHandler);
+
+    document.getElementById("studentWeekSelect").addEventListener("change", async (e) => {
+      selectedWeekId = e.target.value;
+      showLoading(currentLang === "en" ? "Loading week records..." : "正在載入該週課表與紀錄...");
+      try {
+        await loadScheduleForWeek(selectedWeekId, studentActiveTeamId);
+        currentDayIndex = (selectedWeekId === thisWeekId) ? todayDayIndex : 0;
+        populateExerciseSelectors();
+        renderStudentWeekView();
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById("dayTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".stu-day-btn");
+      if (!btn) return;
+      const idx = parseInt(btn.getAttribute("data-dayidx"));
+      if (selectedWeekId === thisWeekId && idx > todayDayIndex) return;
+      currentDayIndex = idx;
+      renderStudentWeekView();
+    });
+
+    document.getElementById("exerciseInputs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".stu-adj-btn");
+      if (!btn) return;
+      const idx = parseInt(btn.getAttribute("data-adjidx"));
+      const delta = parseInt(btn.getAttribute("data-delta"));
+      const ex = currentSchedule[idx];
+      if (!ex) return;
+      const input = document.getElementById(`stu_ex_input_${ex.id}`);
+      if (input && !input.disabled) {
+        input.value = Math.max(0, (parseInt(input.value) || 0) + delta);
+      }
+    });
+
+    document.getElementById("btnSaveWorkout").addEventListener("click", saveStudentDailyWorkout);
+    document.getElementById("stuDailyChartExSelect").addEventListener("change", () => {
+      renderStudentDailyChart(studentLogsMap[selectedWeekId] || {});
+    });
+    document.getElementById("stuGrowthMetricSelect").addEventListener("change", renderStudentGrowthChart);
+
+    document.getElementById("btnToggleMoreHistory").addEventListener("click", () => {
+      showAll20WeeksHistory = !showAll20WeeksHistory;
+      renderStudentHistoryList();
+    });
+
+    document.getElementById("studentHistoryList").addEventListener("click", async (e) => {
+      const card = e.target.closest(".stu-jump-week");
+      if (!card) return;
+      const wId = card.getAttribute("data-jumpweek");
+      document.getElementById("studentWeekSelect").value = wId;
+      selectedWeekId = wId;
+      await loadScheduleForWeek(wId, studentActiveTeamId);
+      currentDayIndex = (wId === thisWeekId) ? todayDayIndex : 0;
+      renderStudentWeekView();
+      switchStudentTab("workout");
+    });
+
+    document.getElementById("achWeekFilterSelect").addEventListener("change", (e) => {
+      selectedAchWeekId = e.target.value;
+      renderStudentAchievements();
+    });
+
+    document.getElementById("pastWeeklyBadgesTimeline").addEventListener("click", (e) => {
+      const row = e.target.closest(".ach-history-row");
+      if (!row) return;
+      selectedAchWeekId = row.getAttribute("data-viewachweek");
+      renderStudentAchievements();
+      document.getElementById("achWeekFilterSelect").scrollIntoView({ behavior: "smooth" });
+    });
+
+    document.querySelectorAll(".stu-nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => switchStudentTab(btn.getAttribute("data-stutab")));
+    });
+
+    document.getElementById("adminTeamFilterSelect").addEventListener("change", async (e) => {
+      adminFilterTeamId = e.target.value;
+      showLoading(currentLang === "en" ? "Switching squad view..." : "正在切換檢視隊伍...");
+      try {
+        await loadAdminWeekOverview(selectedWeekId);
+      } catch (err) {
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.querySelectorAll(".adm-nav-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        requireStaff();
+        const tab = btn.getAttribute("data-admtab");
+        if ((tab === "teams" || tab === "achievements" || tab === "users") && !isHeadCoach()) {
+          return showToast(currentLang === "en" ? "⚠️ Head Coach only!" : "⚠️ 此分頁只限總教練存取！", true);
+        }
+        ['overview', 'schedule', 'teams', 'achievements', 'users'].forEach(t => {
+          const el = document.getElementById(`admin${t.charAt(0).toUpperCase() + t.slice(1)}Tab`);
+          if (el) el.classList.toggle("hidden", t !== tab);
+        });
+        document.querySelectorAll(".adm-nav-btn").forEach(b => {
+          if (b.classList.contains("hidden")) return;
+          const isTarget = b.getAttribute("data-admtab") === tab;
+          b.className = isTarget
+            ? "adm-nav-btn bg-emerald-600 text-white font-black py-2.5 px-2 rounded-xl text-xs sm:text-sm shadow"
+            : "adm-nav-btn bg-slate-100 text-slate-700 font-bold py-2.5 px-2 rounded-xl text-xs sm:text-sm";
+        });
+      });
+    });
+
+    document.getElementById("adminWeekSelect").addEventListener("change", async (e) => {
+      showLoading(currentLang === "en" ? "Switching week..." : "正在切換週次資料...");
+      try {
+        await loadAdminWeekOverview(e.target.value);
+        if (inspectedStudent) {
+          document.getElementById("coachEditWeekLabel").innerText = currentLang === "en"
+            ? `Editing Week: ${formatWeekRangeHK(selectedWeekId)}`
+            : `目前編輯週期：${formatWeekRangeHK(selectedWeekId)}（星期日起計 7 日）`;
+          renderCoachStudentEditor();
+        }
+      } catch (err) {
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById("adminSortSelect").addEventListener("change", renderAdminStudentsOverviewTable);
+    document.getElementById("btnExportCSV").addEventListener("click", exportWeeklyCSV);
+
+    document.getElementById("adminOverviewSearchInput").addEventListener("input", renderAdminStudentsOverviewTable);
+    document.getElementById("btnClearOverviewSearch").addEventListener("click", () => {
+      document.getElementById("adminOverviewSearchInput").value = "";
+      renderAdminStudentsOverviewTable();
+    });
+
+    document.getElementById("allStudentsTable").addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-inspect-student");
+      if (!btn) return;
+      openStudentInspector(btn.getAttribute("data-inspectuid"));
+    });
+
+    document.getElementById("btnCloseInspector").addEventListener("click", () => {
+      document.getElementById("coachStudentInspector").classList.add("hidden");
+      inspectedStudent = null;
+    });
+
+    document.getElementById("btnCoachAdjustArchivedStars").addEventListener("click", handleCoachAdjustArchivedStars);
+    document.getElementById("coachGrowthMetricSelect").addEventListener("change", renderCoachStudentGrowthChart);
+
+    document.getElementById("coachDayTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".coach-day-btn");
+      if (!btn) return;
+      coachSelectedDayIdx = parseInt(btn.getAttribute("data-coachday"));
+      renderCoachStudentEditor();
+    });
+
+    document.getElementById("btnCoachSaveStudentDay").addEventListener("click", () => saveCoachStudentDay(true));
+    document.getElementById("btnCoachClearStudentDay").addEventListener("click", () => saveCoachStudentDay(false));
+
+    document.getElementById("scheduleTargetTeamSelect").addEventListener("change", async (e) => {
+      scheduleEditTeamId = e.target.value;
+      showLoading(currentLang === "en" ? "Loading team schedule..." : `正在載入【${getTeamNameById(scheduleEditTeamId)}】的課表...`);
+      try {
+        await loadScheduleForWeek(thisWeekId, scheduleEditTeamId);
+        renderScheduleEditor();
+      } catch (err) {
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById("btnAddExercise").addEventListener("click", () => {
+      requireStaff();
+      syncScheduleInputsFromDOM();
+      const name = document.getElementById("newExName").value.trim();
+      const target = parseInt(document.getElementById("newExTarget").value) || 10;
+      const unit = document.getElementById("newExUnit").value.trim() || "下";
+      if (!name) return showToast(currentLang === "en" ? "Please enter exercise name!" : "請輸入動作名稱！", true);
+      const newId = "ex_" + Date.now();
+      const newEx = { id: newId, name, target, unit };
+      exerciseCatalog[newId] = newEx;
+      currentSchedule.push(newEx);
+      document.getElementById("newExName").value = "";
+      renderScheduleEditor();
+    });
+
+    document.getElementById("scheduleEditorList").addEventListener("click", (e) => {
+      const btn = e.target.closest(".btn-remove-ex");
+      if (!btn) return;
+      requireStaff();
+      syncScheduleInputsFromDOM();
+      const idx = parseInt(btn.getAttribute("data-remex"));
+      currentSchedule.splice(idx, 1);
+      renderScheduleEditor();
+    });
+
+    document.getElementById("btnSaveScheduleCurrentTeam").addEventListener("click", () => saveWeeklySchedule(false));
+    document.getElementById("btnSaveScheduleAllTeams").addEventListener("click", () => saveWeeklySchedule(true));
+
+    document.getElementById("btnAddTeam").addEventListener("click", handleAddTeam);
+    document.getElementById("teamsManagerList").addEventListener("click", async (e) => {
+      const saveBtn = e.target.closest(".btn-save-team");
+      const delBtn = e.target.closest(".btn-del-team");
+      if (saveBtn) {
+        requireHeadCoach();
+        const idx = parseInt(saveBtn.getAttribute("data-saveteam"));
+        const newName = document.getElementById(`editTeamName_${idx}`)?.value.trim();
+        if (!newName) return showToast(currentLang === "en" ? "⚠️ Team name cannot be empty!" : "⚠️ 隊伍名稱不能為空！", true);
+        teamsList[idx].name = newName;
+        showLoading(currentLang === "en" ? "Updating team name..." : "正在更新隊伍名稱...");
+        try {
+          await ensureAuthReady(true);
+          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+          saveSettingsToLocalCache(true);
+          populateAdminTeamSelectors();
+          renderRegistrationTeamCheckboxes();
+          renderTeamsManager();
+          renderAdminStudentsOverviewTable();
+          renderUserAdminList();
+          showToast(currentLang === "en" ? `✅ Team renamed to [${newName}]!` : `✅ 已將隊伍名稱更新為：【${newName}】！`);
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      } else if (delBtn) {
+        requireHeadCoach();
+        if (teamsList.length <= 1) {
+          return showToast(currentLang === "en" ? "⚠️ Must keep at least 1 team!" : "⚠️ 系統至少需要保留一支隊伍！", true);
+        }
+        const idx = parseInt(delBtn.getAttribute("data-delteam"));
+        const targetTeam = teamsList[idx];
+        const confirmed = await openCustomModal({
+          icon: "🗑️",
+          title: currentLang === "en" ? `Delete [${targetTeam.name}]?` : `確認刪除【${targetTeam.name}】？`,
+          message: currentLang === "en"
+            ? "Players in this team will automatically fall back to the default squad without losing any stars or logs. Confirm delete?"
+            : "刪除後，原本只屬於此隊伍的學員將自動歸入第一支預設隊伍，他們的打卡紀錄與星星不會遺失。確定要刪除嗎？",
+          showCancel: true,
+          confirmText: currentLang === "en" ? "Delete" : "確定刪除"
+        });
+        if (!confirmed) return;
+
+        showLoading(currentLang === "en" ? "Deleting team..." : "正在刪除隊伍...");
+        try {
+          await ensureAuthReady(true);
+          teamsList.splice(idx, 1);
+          await withRetry(() => setDoc(doc(db, "settings", "teams"), { list: teamsList }));
+          saveSettingsToLocalCache(true);
+          populateAdminTeamSelectors();
+          renderRegistrationTeamCheckboxes();
+          renderTeamsManager();
+          renderAdminStudentsOverviewTable();
+          renderUserAdminList();
+          showToast(currentLang === "en" ? `🗑️ Deleted [${targetTeam.name}]` : `🗑️ 已刪除隊伍【${targetTeam.name}】`);
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+
+    document.getElementById("btnAddAchievement").addEventListener("click", async () => {
+      requireHeadCoach();
+      const icon = document.getElementById("newAchIcon").value.trim() || "🏅";
+      const title = document.getElementById("newAchTitle").value.trim();
+      const type = document.getElementById("newAchType").value;
+      const target = parseInt(document.getElementById("newAchTarget").value) || 4;
+      const desc = document.getElementById("newAchDesc").value.trim();
+      if (!title || !desc) return showToast(currentLang === "en" ? "Please fill in title and description!" : "請填寫成就名稱及鼓勵字句！", true);
+      showLoading(currentLang === "en" ? "Adding achievement..." : "正在新增成就獎章...");
+      try {
+        await ensureAuthReady(true);
+        achievementsList.push({ id: "ach_" + Date.now(), icon, title, type, target, desc });
+        await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+        saveSettingsToLocalCache(true);
+        document.getElementById("newAchTitle").value = "";
+        document.getElementById("newAchDesc").value = "";
+        renderAdminAchievements();
+        showToast(currentLang === "en" ? "🎉 Achievement added!" : "🎉 已成功新增成就！");
+      } catch (err) {
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById("adminAchievementsList").addEventListener("click", async (e) => {
+      const saveBtn = e.target.closest(".btn-save-ach");
+      const delBtn = e.target.closest(".btn-del-ach");
+      if (saveBtn) {
+        requireHeadCoach();
+        showLoading(currentLang === "en" ? "Saving achievement..." : "正在更新成就獎章...");
+        try {
+          await ensureAuthReady(true);
+          const idx = parseInt(saveBtn.getAttribute("data-saveach"));
+          achievementsList[idx].icon = document.getElementById(`editAchIcon_${idx}`).value.trim() || "🏅";
+          achievementsList[idx].title = document.getElementById(`editAchTitle_${idx}`).value.trim();
+          achievementsList[idx].type = document.getElementById(`editAchType_${idx}`).value;
+          achievementsList[idx].target = parseInt(document.getElementById(`editAchTarget_${idx}`).value) || 1;
+          achievementsList[idx].desc = document.getElementById(`editAchDesc_${idx}`).value.trim();
+          await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+          saveSettingsToLocalCache(true);
+          showToast(currentLang === "en" ? "✅ Achievement updated!" : "✅ 已更新該項成就！");
+          renderAdminAchievements();
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      } else if (delBtn) {
+        requireHeadCoach();
+        const idx = parseInt(delBtn.getAttribute("data-delach"));
+        const confirmed = await openCustomModal({
+          icon: "🗑️",
+          title: currentLang === "en" ? "Delete Achievement?" : "確認刪除成就？",
+          message: currentLang === "en" ? `Delete "${achievementsList[idx].title}"?` : `確定要刪除「${achievementsList[idx].title}」嗎？`,
+          showCancel: true,
+          confirmText: currentLang === "en" ? "Delete" : "確定刪除"
+        });
+        if (!confirmed) return;
+        showLoading(currentLang === "en" ? "Deleting achievement..." : "正在刪除成就...");
+        try {
+          await ensureAuthReady(true);
+          achievementsList.splice(idx, 1);
+          await withRetry(() => setDoc(doc(db, "settings", "achievements"), { list: achievementsList }));
+          saveSettingsToLocalCache(true);
+          renderAdminAchievements();
+          showToast(currentLang === "en" ? "🗑️ Achievement deleted" : "🗑️ 已刪除該成就");
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+
+    document.getElementById("userAdminRoleFilter").addEventListener("change", renderUserAdminList);
+    document.getElementById("userAdminSearchInput").addEventListener("input", renderUserAdminList);
+    document.getElementById("btnClearUserAdminSearch").addEventListener("click", () => {
+      document.getElementById("userAdminSearchInput").value = "";
+      renderUserAdminList();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && currentUser) {
+        if (refreshDateConstants()) {
+          enterApp(false);
+        }
+      }
+    });
+
+    document.getElementById("userAdminList").addEventListener("click", async (e) => {
+      const resetBtn = e.target.closest(".btn-admin-resetpwd");
+      const assignBtn = e.target.closest(".btn-admin-assignteams");
+      const deleteBtn = e.target.closest(".btn-admin-deleteuser");
+
+      if (deleteBtn) {
+        requireHeadCoach();
+        const uid = deleteBtn.getAttribute("data-deleteuid");
+        const name = deleteBtn.getAttribute("data-deletename");
+        await handleDeleteUserAccount(uid, name);
+      } else if (resetBtn) {
+        requireHeadCoach();
+        const uid = resetBtn.getAttribute("data-resetuid");
+        const name = resetBtn.getAttribute("data-resetname");
+        const newPwd = await openCustomModal({
+          icon: "🔑",
+          title: currentLang === "en" ? `Reset Password for [${name}]` : `幫【${name}】重設密碼`,
+          message: currentLang === "en"
+            ? "Enter a new easy-to-remember password (any length):"
+            : "請輸入簡單易記的新密碼（幾多位數都可以，例如球衣號碼或生日）：",
+          showInput: true,
+          inputPlaceholder: currentLang === "en" ? "New password" : "輸入新密碼",
+          showCancel: true,
+          confirmText: currentLang === "en" ? "✅ Update Password" : "✅ 確認更新密碼"
+        });
+        if (!newPwd || !String(newPwd).trim()) return;
+        const cleanPwd = String(newPwd).trim();
+        showLoading(currentLang === "en" ? "Resetting password..." : "正在重設密碼...");
+        try {
+          await ensureAuthReady(true);
+          const batch = writeBatch(db);
+          batch.update(doc(db, "users", uid), {
+            passwordHash: hashPassword(cleanPwd),
+            needHelp: false,
+            password: ""
+          });
+          batch.delete(doc(db, "user_secrets", uid));
+          await withRetry(() => batch.commit());
+
+          sessionResetPasswordsMap[uid] = cleanPwd;
+          const targetU = adminUsersList.find(item => item.id === uid);
+          if (targetU) targetU.needHelp = false;
+          showToast(currentLang === "en" ? `✅ Password for [${name}] reset to: ${cleanPwd}` : `✅ 已將【${name}】的密碼重設為：${cleanPwd}`);
+          renderUserAdminList();
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      } else if (assignBtn) {
+        requireHeadCoach();
+        const uid = assignBtn.getAttribute("data-assignteamuid");
+        const targetUser = adminUsersList.find(u => u.id === uid);
+        if (!targetUser) return;
+
+        const currentTeamIds = getUserTeamIds(targetUser);
+        const checkboxOptions = teamsList.map(t => ({
+          id: t.id,
+          label: `🚩 ${trText(t.name)}`,
+          checked: currentTeamIds.includes(t.id)
+        }));
+
+        const selectedIds = await openCustomModal({
+          icon: "🚩",
+          title: currentLang === "en" ? `Assign Squads for [${targetUser.chineseName}]` : `分配【${targetUser.chineseName}】的隊伍`,
+          message: targetUser.role === "admin"
+            ? (currentLang === "en" ? "Select squads this Assistant Coach is authorized to manage:" : "請勾選此管理員（助教）獲授權檢視與管理的隊伍（可多選）：")
+            : (currentLang === "en" ? "Select squads this player belongs to:" : "請勾選此學員所屬的隊伍（可多選）："),
+          checkboxOptions,
+          showCancel: true,
+          confirmText: currentLang === "en" ? "💾 Save Squads" : "💾 儲存隊伍權限"
+        });
+
+        if (!selectedIds) return;
+        if (selectedIds.length === 0) {
+          return showToast(currentLang === "en" ? "⚠️ Select at least one squad!" : "⚠️ 請至少為其勾選一支隊伍！", true);
+        }
+
+        showLoading(currentLang === "en" ? "Updating squads..." : "正在更新所屬隊伍權限...");
+        try {
+          await ensureAuthReady(true);
+          await withRetry(() => updateDoc(doc(db, "users", uid), { teamIds: selectedIds }));
+          targetUser.teamIds = selectedIds;
+          renderUserAdminList();
+          renderTeamsManager();
+          renderAdminStudentsOverviewTable();
+          showToast(currentLang === "en" ? `✅ Updated squads for [${targetUser.chineseName}]!` : `✅ 已更新【${targetUser.chineseName}】的隊伍設定！`);
+        } catch (err) {
+          showToast(diagnoseFirebaseError(err), true);
+        } finally {
+          hideLoading();
+        }
+      }
+    });
+
+    document.getElementById("userAdminList").addEventListener("change", async (e) => {
+      const selectEl = e.target.closest(".sel-admin-changerole");
+      if (!selectEl) return;
+      requireHeadCoach();
+      const uid = selectEl.getAttribute("data-changeroleuid");
+      const newRole = selectEl.value;
+      const targetUser = adminUsersList.find(u => u.id === uid);
+      if (!targetUser) return;
+
+      // 保護：不能將最後一位總教練降級，否則系統會無法再改任何角色
+      if (targetUser.role === "coach" && newRole !== "coach") {
+        const coachCount = adminUsersList.filter(u => u.role === "coach").length;
+        if (coachCount <= 1) {
+          showToast(currentLang === "en"
+            ? "⚠️ System requires at least 1 Head Coach! Cannot demote the last Head Coach."
+            : "⚠️ 系統至少需要保留一位總教練，不能將最後一位總教練降級！", true);
+          selectEl.value = "coach";
+          return;
+        }
+      }
+
+      showLoading(currentLang === "en" ? "Updating user role..." : "正在更新帳號職級權限...");
+      try {
+        await ensureAuthReady(true);
+        await withRetry(() => updateDoc(doc(db, "users", uid), { role: newRole }));
+        targetUser.role = newRole;
+        showToast(currentLang === "en"
+          ? `✅ Role updated for [${targetUser.chineseName}]: ${getRoleLabel(newRole)}`
+          : `✅ 已將【${targetUser.chineseName}】設為：${getRoleLabel(newRole)}`);
+        renderUserAdminList();
+        renderTeamsManager();
+        renderAdminStudentsOverviewTable();
+      } catch (err) {
+        showToast(diagnoseFirebaseError(err), true);
+      } finally {
+        hideLoading();
+      }
+    });
+
+    restoreSessionOnBoot();
+  </script>
+</body>
+</html>
